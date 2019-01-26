@@ -32,6 +32,8 @@ class MsgSizeDistributions {
         FABRICATED_HEAVY_MIDDLE,
         FABRICATED_HEAVY_HEAD,
         TEST_DIST,
+	IMC10,
+	DataMining,
         NO_SIZE_DIST_SPECIFIED //Should always remain the last
 
     };

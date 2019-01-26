@@ -30,6 +30,12 @@ WorkloadEstimator::WorkloadEstimator(HomaConfigDepot* homaConfig)
         if (strcmp(workloadType, "DCTCP") == 0) {
             distFileName = std::string(
                     "../../sizeDistributions/DCTCP_MsgSizeDist.txt");
+        } else if (strcmp(workloadType, "IMC10") == 0) {
+            distFileName = std::string(
+                    "../../sizeDistributions/IMC10_MsgSizeDist.txt");
+        } else if (strcmp(workloadType, "DataMining") == 0) {
+            distFileName = std::string(
+                    "../../sizeDistributions/DataMining_MsgSizeDist.txt");
         } else if (strcmp(workloadType, "TEST_DIST") == 0) {
             distFileName = std::string(
                     "../../sizeDistributions/TestDistribution.txt");

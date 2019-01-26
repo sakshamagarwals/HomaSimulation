@@ -165,6 +165,14 @@ WorkloadSynthesizer::initialize()
         distSelector = MsgSizeDistributions::DistributionChoice::DCTCP;
         distFileName = std::string(
                 "../../sizeDistributions/DCTCP_MsgSizeDist.txt");
+    } else if (strcmp(workLoadType, "IMC10") == 0) {
+        distSelector = MsgSizeDistributions::DistributionChoice::IMC10;
+        distFileName = std::string(
+                "../../sizeDistributions/IMC10_MsgSizeDist.txt");
+    } else if (strcmp(workLoadType, "DataMining") == 0) {
+        distSelector = MsgSizeDistributions::DistributionChoice::DataMining;
+        distFileName = std::string(
+                "../../sizeDistributions/DataMining_MsgSizeDist.txt");
     } else if (strcmp(workLoadType, "TEST_DIST") == 0) {
         distSelector = MsgSizeDistributions::DistributionChoice::TEST_DIST;
         distFileName = std::string(

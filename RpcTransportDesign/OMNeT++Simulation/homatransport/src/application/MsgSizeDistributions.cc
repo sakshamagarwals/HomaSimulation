@@ -74,7 +74,9 @@ MsgSizeDistributions::MsgSizeDistributions(const char* distFileName,
         // distribution.
         getline(distFileStream, avgMsgSizeStr);
         sscanf(avgMsgSizeStr.c_str(), "%lf", &avgMsgSize);
-        if (sizeDistSelector == DistributionChoice::DCTCP) {
+        if (sizeDistSelector == DistributionChoice::DCTCP||
+        sizeDistSelector == DistributionChoice::IMC10 ||
+        sizeDistSelector == DistributionChoice::DataMining) {
             avgMsgSize *= maxDataBytesPerPkt; // AvgSize in terms of bytes
         }
 
@@ -101,7 +103,9 @@ MsgSizeDistributions::getSizeAndInterarrival(int &msgSize, int &destHostId,
     destHostId = -1;
     switch(sizeDistSelector) {
         case DistributionChoice::DCTCP:
-        case DistributionChoice::GOOGLE_ALL_RPC:
+        case DistributionChoice::IMC10:
+	case DistributionChoice::DataMining:
+	case DistributionChoice::GOOGLE_ALL_RPC:
         case DistributionChoice::GOOGLE_SEARCH_RPC:
         case DistributionChoice::FACEBOOK_WEB_SERVER_INTRACLUSTER:
         case DistributionChoice::FACEBOOK_CACHE_FOLLOWER_INTRACLUSTER:
@@ -168,7 +172,9 @@ MsgSizeDistributions::getInterarrivalSizeFromVec(int &msgSize,
     }
     msgSize = msgSizeProbDistVector[high].first;
 
-    if (sizeDistSelector == DistributionChoice::DCTCP){
+    if (sizeDistSelector == DistributionChoice::DCTCP ||
+	sizeDistSelector == DistributionChoice::IMC10 ||
+	sizeDistSelector == DistributionChoice::DataMining){
         msgSize *= maxDataBytesPerPkt;
     }
 
