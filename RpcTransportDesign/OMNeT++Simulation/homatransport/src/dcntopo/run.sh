@@ -1,0 +1,1 @@
+/home/qizhe/HomaSimulation/omnetpp-4.6/bin/opp_runall -j5 ../homatransport -u Cmdenv -c WorkloadIMC10  -n ..:../../simulations:../../../inet/examples:../../../inet/src -l ../../../inet/src/INET -r 0-4 test.ini
