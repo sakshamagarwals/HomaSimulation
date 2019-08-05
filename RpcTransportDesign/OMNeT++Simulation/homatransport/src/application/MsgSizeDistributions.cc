@@ -148,6 +148,11 @@ MsgSizeDistributions::getInfileSizeInterarrivalDest(int &msgSize,
     return;
 }
 
+double MsgSizeDistributions::interpolate(double x, double x1, double y1,
+                                            double x2, double y2) {
+  double value = y1 + (x - x1) * (y2 - y1) / (x2 - x1);
+  return value;
+}
 /*
  * Internal method for DCTCP, TestDist, FACEBOOK_CACHE_FOLLOWER_INTRACLUSTER,
  * FACEBOOK_WEB_SERVER_INTRACLUSTER, FACEBOOK_HADOOP_ALL,
@@ -170,8 +175,14 @@ MsgSizeDistributions::getInterarrivalSizeFromVec(int &msgSize,
             low = mid + 1;
         }
     }
-    msgSize = msgSizeProbDistVector[high].first;
+    mid = low;
+    if(mid != 0 && prob < msgSizeProbDistVector[mid].second) {
+        msgSize = interpolate(prob, msgSizeProbDistVector[mid-1].second, msgSizeProbDistVector[mid-1].first,
+           msgSizeProbDistVector[mid].second, msgSizeProbDistVector[mid].first);
+    } else {
+        msgSize = msgSizeProbDistVector[mid].first;
 
+    }
     if (sizeDistSelector == DistributionChoice::DCTCP ||
 	sizeDistSelector == DistributionChoice::IMC10 ||
 	sizeDistSelector == DistributionChoice::DataMining){

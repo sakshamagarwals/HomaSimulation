@@ -16,6 +16,7 @@
 #include <unordered_set>
 #include<iterator>
 #include<iostream>
+#include <fstream>
 #include "WorkloadSynthesizer.h"
 #include "transport/HomaPkt.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
@@ -415,6 +416,10 @@ WorkloadSynthesizer::sendMsg()
     emit(sentMsgSignal, appMessage);
     send(appMessage, "transportOut");
     numSent++;
+    // std::ofstream out;
+    // out.open("trace.txt", std::ios::out | std::ios::app);
+    // out << srcAddress.str() << " " << destAddrs.str() << " " << sendMsgSize << " " << appMessage->getCreationTime()  << std::endl;
+    // out.close();
 }
 
 void

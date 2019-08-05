@@ -18,7 +18,7 @@ import random
 import re
 import sys
 import warnings
-sys.path.insert(0, os.environ['HOME'] + '/Research/RpcTransportDesign/OMNeT++Simulation/analysis')
+sys.path.insert(0, os.environ['HOME'] + '/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis')
 from parseResultFiles import *
 from MetricsDashBoard import *
 
@@ -35,7 +35,7 @@ def prepE2EStretchVsSizeAndUnsched(resultDir = ''):
     the Unsched bytes for homatransport.
     """
 
-    f = open(os.environ['HOME'] + "/Research/RpcTransportDesign"+
+    f = open(os.environ['HOME'] + "/HomaSimulation/RpcTransportDesign"+
         "/OMNeT++Simulation/analysis/PlotScripts/stretchVsUnsched.txt", 'w')
     tw_h = 40
     tw_l = 15
@@ -55,7 +55,7 @@ def prepE2EStretchVsSizeAndUnsched(resultDir = ''):
         parsedStats.generalInfo = sp.generalInfo
 
 
-        xmlConfigFile =  os.environ['HOME'] + '/Research/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
+        xmlConfigFile =  os.environ['HOME'] + '/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
         xmlParsedDic = AttrDict()
         xmlParsedDic = parseXmlFile(xmlConfigFile,parsedStats.generalInfo)
         msgBytesOnWireDigest = AttrDict()
@@ -104,7 +104,7 @@ def prepE2EStretchVsSizeAndUnsched(resultDir = ''):
 
 def prepE2EStretchVsTransport(resultDir, outputFileName, resultFiles=[]):
     f = open(os.environ['HOME'] +
-        "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/" +
+        "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/" +
         outputFileName, 'w')
     tw_h = 40
     tw_l = 15
@@ -126,7 +126,7 @@ def prepE2EStretchVsTransport(resultDir, outputFileName, resultFiles=[]):
         parsedStats.cores = sp.cores
         parsedStats.generalInfo = sp.generalInfo
 
-        xmlConfigFile =  os.environ['HOME'] + '/Research/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
+        xmlConfigFile =  os.environ['HOME'] + '/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
         xmlParsedDic = AttrDict()
         xmlParsedDic = parseXmlFile(xmlConfigFile,parsedStats.generalInfo)
         msgBytesOnWireDigest = AttrDict()
@@ -174,7 +174,7 @@ def prepE2EStretchVsTransport(resultDir, outputFileName, resultFiles=[]):
 
 def prepQueueDigest(resultDir, outputFileName, resultFiles=[]):
     f = open(os.environ['HOME'] +
-        "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/" +
+        "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/" +
         outputFileName, 'w')
     tw_h = 40
     tw_l = 15
@@ -197,7 +197,7 @@ def prepQueueDigest(resultDir, outputFileName, resultFiles=[]):
         parsedStats.cores = sp.cores
         parsedStats.generalInfo = sp.generalInfo
 
-        xmlConfigFile =  os.environ['HOME'] + '/Research/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
+        xmlConfigFile =  os.environ['HOME'] + '/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
         xmlParsedDic = AttrDict()
         xmlParsedDic = parseXmlFile(xmlConfigFile,parsedStats.generalInfo)
         loadFactor = float(parsedStats.generalInfo.rlf) * len(xmlParsedDic.senderIds) / len(xmlParsedDic.receiverIds)
@@ -239,7 +239,7 @@ def prepQueueDigest(resultDir, outputFileName, resultFiles=[]):
 
 def prepE2EStretchVsPrioCutoff(resultDir, outputFileName, resultFiles=[]):
     f = open(os.environ['HOME'] +
-        "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/" +
+        "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/" +
         outputFileName, 'w')
     tw_h = 40
     tw_l = 15
@@ -263,7 +263,7 @@ def prepE2EStretchVsPrioCutoff(resultDir, outputFileName, resultFiles=[]):
         parsedStats.cores = sp.cores
         parsedStats.generalInfo = sp.generalInfo
 
-        xmlConfigFile =  os.environ['HOME'] + '/Research/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
+        xmlConfigFile =  os.environ['HOME'] + '/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
         xmlParsedDic = AttrDict()
         xmlParsedDic = parseXmlFile(xmlConfigFile,parsedStats.generalInfo)
         msgBytesOnWireDigest = AttrDict()
@@ -314,7 +314,7 @@ def prepE2EStretchVsPrioCutoff(resultDir, outputFileName, resultFiles=[]):
 
 def prepE2EStretchVsUnschedPrioMode(resultDir, outputFileName, resultFiles=[]):
     f = open(os.environ['HOME'] +
-        "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/" +
+        "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/" +
          outputFileName, 'w')
     tw_h = 40
     tw_l = 15
@@ -339,7 +339,7 @@ def prepE2EStretchVsUnschedPrioMode(resultDir, outputFileName, resultFiles=[]):
         parsedStats.cores = sp.cores
         parsedStats.generalInfo = sp.generalInfo
 
-        xmlConfigFile =  os.environ['HOME'] + '/Research/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
+        xmlConfigFile =  os.environ['HOME'] + '/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/config.xml'
         xmlParsedDic = AttrDict()
         xmlParsedDic = parseXmlFile(xmlConfigFile,parsedStats.generalInfo)
         msgBytesOnWireDigest = AttrDict()
@@ -397,7 +397,7 @@ if __name__ == '__main__':
             ' result files, preparing the input files for plotting, and calling plotting'
             ' scripts.')
     parser.add_option('--resultDir', metavar='DIR',
-            default = os.environ['HOME'] + '/Research/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/results',
+            default = os.environ['HOME'] + '/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/homatransport/src/dcntopo/results',
             dest='resultDir',
             help='Directory containing result files')
 
@@ -416,12 +416,12 @@ if __name__ == '__main__':
         sys.exit(prepE2EStretchVsSizeAndUnsched(resultDir))
     elif plotType == 'StretchVsUnsched':
         prepE2EStretchVsSizeAndUnsched(resultDir)
-        plotPath = os.environ['HOME'] + "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
+        plotPath = os.environ['HOME'] + "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
         print subprocess.Popen('cd {0}; Rscript PlotStretchVsUnsched.r'.format(plotPath),
             shell=True, stdout=subprocess.PIPE).stdout.read()
     elif plotType == 'StretchVsSize':
         prepE2EStretchVsSizeAndUnsched(resultDir)
-        plotPath = os.environ['HOME'] + "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
+        plotPath = os.environ['HOME'] + "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
         print subprocess.Popen('cd {0}; Rscript PlotStretchVsSize.r'.format(plotPath),
             shell=True, stdout=subprocess.PIPE).stdout.read()
     elif plotType == 'StretchVsTransport':
@@ -443,7 +443,7 @@ if __name__ == '__main__':
             "pseudoIdeal_RawData/WorkloadFabricatedHeavyMiddle-2.sca"]
         """
         prepE2EStretchVsTransport(resultDir, outputFileName, resultFiles)
-        plotPath = os.environ['HOME'] + "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
+        plotPath = os.environ['HOME'] + "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
         print subprocess.Popen('cd {0}; Rscript PlotStretchVsTransport.r'.format(plotPath),
             shell=True, stdout=subprocess.PIPE).stdout.read()
     elif plotType == 'StretchVsUnschedPrioMode':
@@ -451,7 +451,7 @@ if __name__ == '__main__':
         resultFiles = [line.rstrip('\n') for line in f]
         f.close()
         prepE2EStretchVsUnschedPrioMode(resultDir, outputFileName, resultFiles)
-        #plotPath = os.environ['HOME'] + "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
+        #plotPath = os.environ['HOME'] + "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
         #print subprocess.Popen('cd {0}; Rscript PlotStretchVsTransport.r'.format(plotPath),
         #    shell=True, stdout=subprocess.PIPE).stdout.read()
 
@@ -460,7 +460,7 @@ if __name__ == '__main__':
         resultFiles = [line.rstrip('\n') for line in f]
         f.close()
         prepE2EStretchVsPrioCutoff(resultDir, outputFileName, resultFiles)
-        #plotPath = os.environ['HOME'] + "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
+        #plotPath = os.environ['HOME'] + "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
         #print subprocess.Popen('cd {0}; Rscript PlotStretchVsTransport.r'.format(plotPath),
         #    shell=True, stdout=subprocess.PIPE).stdout.read()
 
@@ -469,6 +469,6 @@ if __name__ == '__main__':
         resultFiles = [line.rstrip('\n') for line in f]
         f.close()
         prepQueueDigest(resultDir, outputFileName, resultFiles)
-        #plotPath = os.environ['HOME'] + "/Research/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
+        #plotPath = os.environ['HOME'] + "/HomaSimulation/RpcTransportDesign/OMNeT++Simulation/analysis/PlotScripts/"
         #print subprocess.Popen('cd {0}; Rscript PlotStretchVsTransport.r'.format(plotPath),
         #    shell=True, stdout=subprocess.PIPE).stdout.read()

@@ -16,6 +16,7 @@ import random
 import re
 import sys
 import warnings
+import json
 
 sys.path.insert(0, os.environ['HOME'] + '/Research/RpcTransportDesign/OMNeT++Simulation/analysis')
 from parseResultFiles import *
@@ -363,7 +364,7 @@ def printQueueTimeStats(queueWaitTimeDigest, unit):
     printStatsLine(torsDownStats, 'RX TORs Down NICs:', tw, fw, unit, printKeys)
     print('_'*2*tw + '\n' + 'Total'.ljust(tw) + '{0:.2f}'.format(meanSum*1e6).center(fw) + '{0:.2f}'.format(meanFracSum).center(fw))
 
-def printE2EStretchAndDelay(e2eStretchAndDelayDigest, unit):
+def printE2EStretchAndDelay(e2eStretchAndDelayDigest, unit, out, load):
     printKeys = ['mean', 'meanFrac', 'stddev', 'min', 'median', 'threeQuartile', 'ninety9Percentile', 'max', 'count', 'cntPercent', 'bytes', 'bytesPercent']
     tw = 19
     fw = 10
@@ -418,8 +419,17 @@ def printE2EStretchAndDelay(e2eStretchAndDelayDigest, unit):
 
     end2EndStretchDigest = e2eStretchAndDelayDigest.stretch
     sizeLowBound = ['0'] + [e2eSizedStretch.sizeUpBound for e2eSizedStretch in end2EndStretchDigest[0:len(end2EndStretchDigest)-1]]
+    total_count = 0.0
+    total_slowdown = 0.0
     for i, e2eSizedStretch in enumerate(end2EndStretchDigest):
         printStatsLine(e2eSizedStretch, '({0}, {1}]'.format(sizeLowBound[i], e2eSizedStretch.sizeUpBound), tw, fw, '', printKeys)
+        total_count +=  e2eSizedStretch['count']
+        total_slowdown += e2eSizedStretch['mean'] * e2eSizedStretch['count']
+        out[load]["mean"].append(e2eSizedStretch['mean'])
+        out[load]["99"].append(e2eSizedStretch['ninety9Percentile'])
+        out[load]["stddev"].append(e2eSizedStretch['stddev'])
+    print e2eSizedStretch
+    print total_slowdown / total_count, total_count
 
 def msgBytesOnWire(parsedStats, xmlParsedDic, msgBytesOnWireDigest):
     if 'globalListener' in parsedStats:
@@ -1546,62 +1556,82 @@ def printQueueLength(queueLen):
     printStatsLine(queueLen.tors.down.nic.queueLenDigest, queueLen.tors.down.nic.queueLenDigest.title, tw, fw, '', printKeys)
 
 def main():
+    traces = ["IMC10", "DCTCP"]
+    directory = "homatransport/src/dcntopo/results/manyReceivers/comparison/"
+    output_file = "result.txt"
+    out = open(output_file, "w")
+    results = {}
     parser = OptionParser()
     options, args = parser.parse_args()
     if len(args) > 0:
-        scalarResultFile = args[0]
+        # scalarResultFile = args[0]
+        direct = args[0]
     else:
         scalarResultFile = 'homatransport/src/dcntopo/results/RecordAllStats-0.sca'
-
+    
+    directory = directory + direct + '/'
     if len(args) > 1:
         xmlConfigFile = args[1]
     else:
         xmlConfigFile = 'homatransport/src/dcntopo/config.xml'
 
-    sp = ScalarParser(scalarResultFile)
-    parsedStats = AttrDict()
-    parsedStats.hosts = sp.hosts
-    parsedStats.tors = sp.tors
-    parsedStats.aggrs = sp.aggrs
-    parsedStats.cores = sp.cores
-    parsedStats.generalInfo = sp.generalInfo
-    parsedStats.globalListener = sp.globalListener
+    for trace in traces:
+        results[trace] = {}
+        for i in range(5):
+            scalarResultFile = directory + "Workload{}-{}.sca".format(trace, i)
+            sp = ScalarParser(scalarResultFile)
+            parsedStats = AttrDict()
+            parsedStats.hosts = sp.hosts
+            parsedStats.tors = sp.tors
+            parsedStats.aggrs = sp.aggrs
+            parsedStats.cores = sp.cores
+            parsedStats.generalInfo = sp.generalInfo
+            parsedStats.globalListener = sp.globalListener
 
-    xmlParsedDic = AttrDict()
-    xmlParsedDic = parseXmlFile(xmlConfigFile, parsedStats.generalInfo)
+            xmlParsedDic = AttrDict()
+            xmlParsedDic = parseXmlFile(xmlConfigFile, parsedStats.generalInfo)
 
-    queueWaitTimeDigest = AttrDict()
-    hostQueueWaitTimes(parsedStats.hosts, xmlParsedDic, queueWaitTimeDigest)
-    torsQueueWaitTime(parsedStats.tors, parsedStats.generalInfo, xmlParsedDic, queueWaitTimeDigest)
-    aggrsQueueWaitTime(parsedStats.aggrs, parsedStats.generalInfo, xmlParsedDic, queueWaitTimeDigest)
-    printGenralInfo(xmlParsedDic, parsedStats.generalInfo)
-    if parsedStats.generalInfo.transportSchemeType == 'HomaTransport':
-        printHomaOutstandingBytes(parsedStats, xmlParsedDic, 'KB')
-    trafficDic = computeHomaRates(parsedStats, xmlParsedDic)
-    printHomaRates(trafficDic)
-    if parsedStats.generalInfo.transportSchemeType == 'HomaTransport':
-        activeAndWasted = computeWastedTimesAndBw(parsedStats, xmlParsedDic)
-        selfWasteTime = computeSelfInflictedWastedBw(parsedStats, xmlParsedDic)
-        printWastedTimeAndBw(parsedStats, xmlParsedDic, activeAndWasted, selfWasteTime)
-    if parsedStats.generalInfo.transportSchemeType == 'HomaTransport':
-        prioUsageStatsDigest = list()
-        computePrioUsageStats(parsedStats.hosts, parsedStats.generalInfo, xmlParsedDic, prioUsageStatsDigest)
-        printPrioUsageStats(prioUsageStatsDigest)
-    trafficDic = computeBytesAndRates(parsedStats, xmlParsedDic)
-    printBytesAndRates(trafficDic)
-    queueLen = computeQueueLength(parsedStats, xmlParsedDic)
-    printQueueLength(queueLen)
-    printQueueTimeStats(queueWaitTimeDigest, 'us')
-    msgBytesOnWireDigest = AttrDict()
-    msgBytesOnWire(parsedStats, xmlParsedDic, msgBytesOnWireDigest)
+            queueWaitTimeDigest = AttrDict()
+            hostQueueWaitTimes(parsedStats.hosts, xmlParsedDic, queueWaitTimeDigest)
+            torsQueueWaitTime(parsedStats.tors, parsedStats.generalInfo, xmlParsedDic, queueWaitTimeDigest)
+            aggrsQueueWaitTime(parsedStats.aggrs, parsedStats.generalInfo, xmlParsedDic, queueWaitTimeDigest)
+            printGenralInfo(xmlParsedDic, parsedStats.generalInfo)
+            if parsedStats.generalInfo.transportSchemeType == 'HomaTransport':
+                printHomaOutstandingBytes(parsedStats, xmlParsedDic, 'KB')
+            trafficDic = computeHomaRates(parsedStats, xmlParsedDic)
+            printHomaRates(trafficDic)
+            if parsedStats.generalInfo.transportSchemeType == 'HomaTransport':
+                activeAndWasted = computeWastedTimesAndBw(parsedStats, xmlParsedDic)
+                selfWasteTime = computeSelfInflictedWastedBw(parsedStats, xmlParsedDic)
+                printWastedTimeAndBw(parsedStats, xmlParsedDic, activeAndWasted, selfWasteTime)
+            if parsedStats.generalInfo.transportSchemeType == 'HomaTransport':
+                prioUsageStatsDigest = list()
+                computePrioUsageStats(parsedStats.hosts, parsedStats.generalInfo, xmlParsedDic, prioUsageStatsDigest)
+                printPrioUsageStats(prioUsageStatsDigest)
+            trafficDic = computeBytesAndRates(parsedStats, xmlParsedDic)
+            printBytesAndRates(trafficDic)
+            queueLen = computeQueueLength(parsedStats, xmlParsedDic)
+            printQueueLength(queueLen)
+            printQueueTimeStats(queueWaitTimeDigest, 'us')
+            msgBytesOnWireDigest = AttrDict()
+            msgBytesOnWire(parsedStats, xmlParsedDic, msgBytesOnWireDigest)
 
-    transportSchedDelayDigest = AttrDict()
-    transportSchedDelay(parsedStats, xmlParsedDic, msgBytesOnWireDigest, transportSchedDelayDigest)
-    printTransportSchedDelay(transportSchedDelayDigest, 'us')
+            transportSchedDelayDigest = AttrDict()
+            transportSchedDelay(parsedStats, xmlParsedDic, msgBytesOnWireDigest, transportSchedDelayDigest)
+            printTransportSchedDelay(transportSchedDelayDigest, 'us')
 
-    e2eStretchAndDelayDigest = AttrDict()
-    e2eStretchAndDelay(parsedStats, xmlParsedDic, msgBytesOnWireDigest, e2eStretchAndDelayDigest)
-    printE2EStretchAndDelay(e2eStretchAndDelayDigest, 'us')
+            e2eStretchAndDelayDigest = AttrDict()
+            e2eStretchAndDelay(parsedStats, xmlParsedDic, msgBytesOnWireDigest, e2eStretchAndDelayDigest)
+            load = i / 10.0 + 0.5
+            results[trace][load] = {}
+            results[trace][load]['mean'] = []
+            results[trace][load]['99'] = []
+            results[trace][load]['stddev'] = []
+
+            printE2EStretchAndDelay(e2eStretchAndDelayDigest, 'us', results[trace], load)
+    file = json.dumps(results)
+    out.write(file)
+    out.close()
 
 if __name__ == '__main__':
     sys.exit(main());

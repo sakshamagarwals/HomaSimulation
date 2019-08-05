@@ -6,6 +6,7 @@
  */
 
 #include <cmath>
+#include <assert.h>
 #include "UnschedByteAllocator.h"
 
 UnschedByteAllocator::UnschedByteAllocator(HomaConfigDepot* homaConfig)
@@ -85,6 +86,9 @@ UnschedByteAllocator::getReqUnschedDataPkts(uint32_t rxAddr, uint32_t msgSize)
     uint32_t reqData = getReqDataBytes(rxAddr, msgSize);
     std::vector<uint16_t> reqUnschedPktsData = {};
     reqUnschedPktsData.push_back(downCast<uint16_t>(reqData));
+//    if (msgSize > homaConfig->defaultUnschedBytes) {
+//    	return reqUnschedPktsData;
+//    }
     uint32_t unschedData = getUnschedBytes(rxAddr, msgSize);
     while (unschedData > 0) {
         uint32_t unschedInPkt = std::min(unschedData, maxUnschedPktDataBytes);

@@ -81,6 +81,7 @@ class MsgSizeDistributions {
     void getInterarrivalSizeFromVec(int &msgSize, double &nextInterarrivalTime);
     double facebookParetoInterGap();
     double getInterarrivalTime();
+    double interpolate(double x, double x1, double y1, double x2, double y2); 
 };
 
 struct MsgSizeDistException : std::exception {

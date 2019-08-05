@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
-
+#include "assert.h"
 #include "inet/common/INETDefs.h"
 
 #include "inet/common/queue/DropTailQueue.h"
@@ -47,7 +47,8 @@ void DropTailQueue::initialize()
 
     // configuration
     frameCapacity = par("frameCapacity");
-
+//    std::cout << "frameCapacity " << frameCapacity << std::endl;
+//    assert(false);
     mac = getNextMacLayer();
     if (!mac) {
         EV_WARN << "Warning. No mac connected to queue module.\n";
