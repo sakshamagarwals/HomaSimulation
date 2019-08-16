@@ -235,7 +235,7 @@ WorkloadSynthesizer::initialize()
         distSelector =
                 MsgSizeDistributions::DistributionChoice::SIZE_IN_FILE;
         distFileName = std::string(
-                "../../sizeDistributions/HostidSizeInterarrival.txt");
+                "../../sizeDistributions/" + par("workloadFile").stringValue());
     } else {
         throw cRuntimeError("'%s': Not a valie workload type.",workLoadType);
     }
@@ -603,6 +603,8 @@ WorkloadSynthesizer::idealMsgEndToEndDelay(AppMessage* rcvdMsg)
     double msgSerializationDelay =
             1e-9 * ((totalBytesTranmitted << 3) * 1.0 / nicLinkSpeed);
 
+    double msgSerializationDelay =
+            1e-9 * ((totalBytesTranmitted << 3) * 1.0 / nicLinkSpeed);
     // There's always two hostSwTurnAroundTime and one nicThinkTime involved
     // in ideal latency for the overhead.
     double hostDelayOverheads = 2 * hostSwTurnAroundTime + hostNicSxThinkTime;
