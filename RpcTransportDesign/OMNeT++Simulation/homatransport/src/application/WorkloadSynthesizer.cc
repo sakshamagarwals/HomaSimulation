@@ -31,6 +31,10 @@ simsignal_t WorkloadSynthesizer::msgE2EDelaySignal =
     registerSignal("msgE2EDelay");
 simsignal_t WorkloadSynthesizer::mesgStatsSignal = registerSignal("mesgStats");
 
+std::ofstream outputFile;
+uint64_t total_bytes;
+uint64_t total_outstanding_bytes;
+int total_sent = 0;
 WorkloadSynthesizer::WorkloadSynthesizer()
 {
     msgSizeGenerator = NULL;
@@ -144,7 +148,11 @@ WorkloadSynthesizer::initialize()
     startTime = par("startTime").doubleValue();
     stopTime = par("stopTime").doubleValue();
     xmlConfig = par("appConfig").xmlValue();
-
+    std::string OutputFileName = std::string(
+                "results/") + std::string(par("resultFile").stringValue());
+    if(!outputFile.is_open()) {
+        outputFile.open(OutputFileName);
+    }
     // Setup templated statistics ans signals
     const char* msgSizeRanges = par("msgSizeRanges").stringValue();
     registerTemplatedStats(msgSizeRanges);
@@ -235,7 +243,7 @@ WorkloadSynthesizer::initialize()
         distSelector =
                 MsgSizeDistributions::DistributionChoice::SIZE_IN_FILE;
         distFileName = std::string(
-                "../../sizeDistributions/" + par("workloadFile").stringValue());
+                "../../sizeDistributions/") + std::string(par("workloadFile").stringValue());
     } else {
         throw cRuntimeError("'%s': Not a valie workload type.",workLoadType);
     }
@@ -415,7 +423,17 @@ WorkloadSynthesizer::sendMsg()
     appMessage->setTransportSchedDelay(appMessage->getCreationTime());
     emit(sentMsgSignal, appMessage);
     send(appMessage, "transportOut");
+    //std::cout << simTime().dbl() << " flow id " << numSent 
+      //  << " " << srcAddress << " " << destAddrs << std::endl;
+    appMessage->flow_id = total_sent;
+    total_bytes += sendMsgSize;
+    total_outstanding_bytes += sendMsgSize;
+    if(total_sent % 100000 == 0) {
+        outputFile << "## " << simTime() << " " << total_outstanding_bytes << " " <<  total_bytes << "\n";
+        outputFile.flush();
+    }
     numSent++;
+    total_sent++;
     // std::ofstream out;
     // out.open("trace.txt", std::ios::out | std::ios::app);
     // out << srcAddress.str() << " " << destAddrs.str() << " " << sendMsgSize << " " << appMessage->getCreationTime()  << std::endl;
@@ -546,7 +564,16 @@ WorkloadSynthesizer::processRcvdMsg(cPacket* msg)
     mesgStats.queuingDelay =  queuingDelay;
     mesgStats.transportSchedDelay =  rcvdMsg->getTransportSchedDelay();
     emit(mesgStatsSignal, &mesgStats);
+    //
+    inet::L3Address srcAddr = rcvdMsg->getSrcAddr();
+    inet::L3Address destAddr = rcvdMsg->getDestAddr();
 
+    int srcId = srcAddr.toIPv4().getDByte(2) * 16 + srcAddr.toIPv4().getDByte(3);
+    int dstId = destAddr.toIPv4().getDByte(2) * 16 + destAddr.toIPv4().getDByte(3);
+    
+    outputFile  << srcId << " " << dstId << " " << msgByteLen << " " << rcvdMsg->getMsgCreationTime().dbl() << " " << simTime() << " " 
+    << completionTime.dbl() << std::endl;
+    outputFile.flush();
     delete rcvdMsg;
     numReceived++;
 }
@@ -600,11 +627,11 @@ WorkloadSynthesizer::idealMsgEndToEndDelay(AppMessage* rcvdMsg)
         totalBytesTranmitted += lastPartialFrameLen;
     }
 
-    double msgSerializationDelay =
-            1e-9 * ((totalBytesTranmitted << 3) * 1.0 / nicLinkSpeed);
+    //double msgSerializationDelay =
+      //      1e-9 * ((totalBytesTranmitted << 3) * 1.0 / nicLinkSpeed);
 
     double msgSerializationDelay =
-            1e-9 * ((totalBytesTranmitted << 3) * 1.0 / nicLinkSpeed);
+            1e-9 * ((rcvdMsg->getByteLength() << 3) * 1.0 / nicLinkSpeed);
     // There's always two hostSwTurnAroundTime and one nicThinkTime involved
     // in ideal latency for the overhead.
     double hostDelayOverheads = 2 * hostSwTurnAroundTime + hostNicSxThinkTime;

@@ -489,7 +489,7 @@ class HomaTransport : public cSimpleModule
             }
             simtime_t getNextGrantTime(simtime_t currentTime,
                 uint32_t grantSize);
-            int sendAndScheduleGrant(uint32_t grantPrio);
+            int sendAndScheduleGrant(uint32_t grantPrio, std::string upperFunc);
             std::pair<bool, int> handleInboundPkt(HomaPkt* rxPkt);
 
           PROTECTED:
@@ -533,6 +533,7 @@ class HomaTransport : public cSimpleModule
             class CompSched {
               PUBLIC:
                 CompSched(){}
+                // return true, if lhs < rhs
                 bool operator()(const SenderState* lhs, const SenderState* rhs)
                 {
                     if (!lhs && !rhs)
@@ -723,6 +724,7 @@ class HomaTransport : public cSimpleModule
         simtime_t oversubPeriodStart, oversubPeriodStop;
 
         // Only true when an over subscription period has started not yet ended.
+        // this is only for debugging purpose
         bool inOversubPeriod;
 
         // Tracks the bytes received during each over subscription period.

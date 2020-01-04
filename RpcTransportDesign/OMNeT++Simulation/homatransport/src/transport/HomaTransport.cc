@@ -16,13 +16,21 @@
 #include <algorithm>
 #include <random>
 #include <cmath>
+#include <fstream>
+#include <mutex>
 #include "transport/HomaPkt.h"
 #include "transport/PriorityResolver.h"
 #include "HomaTransport.h"
 
+extern uint64_t total_outstanding_bytes;
+
 // Required by OMNeT++ for all simple modules.
 Define_Module(HomaTransport);
-
+// double totalsentPkt = 0;
+// double recordTime = 1e-5;
+// bool recordMode = true;
+// std::mutex m_lock;
+// std::fstream recordf("record.txt", std::fstream::in | std::fstream::out | std::fstream::app);
 /**
  * Registering all statistics collection signals.
  */
@@ -578,6 +586,20 @@ HomaTransport::SendController::processReceivedGrant(HomaPkt* rxPkt)
 void
 HomaTransport::SendController::sendOrQueue(cMessage* msg)
 {
+    simtime_t timeNow = simTime();
+    // if(recordMode) {
+    //     m_lock.lock();
+    //     if(timeNow.dbl() > recordTime) {
+    //         double utilization = totalsentPkt * 1442 * 8 / timeNow.dbl() / 1e10 / 7;
+    //         recordf << timeNow.dbl() << " " << utilization << "\n";
+    //         recordTime = timeNow.dbl() + 1e-5;
+    //         // std::cout << timeNow.dbl() << std::endl;
+    //         // if(recordTime > 1e-4) {
+    //         //     ASSERT(false);
+    //         // }
+    //     }
+    //     m_lock.unlock();
+    // }
     HomaPkt* sxPkt = NULL;
     if (msg == transport->sendTimer) {
         // Send timer fired and it's time to check if we can send a data packet.
@@ -684,6 +706,10 @@ HomaTransport::SendController::sendPktAndScheduleNext(HomaPkt* sxPkt)
             ASSERT(bytesLeftToSend >= numDataBytes);
             bytesLeftToSend -= numDataBytes;
             sentBytesPerActivePeriod += bytesSentOnWire;
+            //if(sxPkt->getSrcAddr().toIPv4().getDByte(3) == 145) {
+              //  std::cout << simTime() << " send data packet: message src address: " << sxPkt->getSrcAddr() << " dst addr: " 
+               // << sxPkt->getDestAddr() << std::endl;
+            //}
             if (bytesLeftToSend == 0) {
                 // This is end of the active period, so record stats
                 simtime_t activePeriod = currentTime - activePeriodStart +
@@ -1266,7 +1292,20 @@ HomaTransport::ReceiveScheduler::processReceivedPkt(HomaPkt* rxPkt)
     simtime_t pktDuration =
         SimTime(1e-9 * (pktLenOnWire * 8.0 / homaConfig->nicLinkSpeed));
     simtime_t timeNow = simTime();
-
+    // if(recordMode) {
+    //     m_lock.lock();
+    //     totalsentPkt += 1;
+    //     // if(timeNow.dbl() > recordTime) {
+    //     //     double utilization = totalsentPkt * 1442 * 8 / timeNow.dbl() / 1e10 / 144;
+    //     //     recordf << timeNow.dbl() << " " << utilization << "\n";
+    //     //     recordTime += timeNow.dbl() + 1e-5;
+    //     //     std::cout << timeNow.dbl() << std::endl;
+    //     //     // if(recordTime > 1e-4) {
+    //     //     //     ASSERT(false);
+    //     //     // }
+    //     // }
+    //     m_lock.unlock();
+    // }
     // Check if receiver bw is wasted may have been as a result receiver not
     // sending enough timely grants to some sched messages
     simtime_t sinceLastPkt = simTime() - lastRecvTime;
@@ -1474,6 +1513,7 @@ HomaTransport::ReceiveScheduler::processGrantTimers(cMessage* grantTimer)
     EV << "\n\n################Process Grant Timer################\n\n" << endl;
     SenderState* s = grantTimersMap[grantTimer];
     schedSenders->handleGrantTimerEvent(s);
+    // std::cout << simTime() << " handle grant timer: " << s->getSenderAddr() << std::endl;
     simtime_t timeNow = simTime();
 
     //schedSenders->remove(s);
@@ -1708,7 +1748,11 @@ HomaTransport::ReceiveScheduler::SenderState::handleInboundPkt(HomaPkt* rxPkt)
             rxPkt->getPktType() == PktType::UNSCHED_DATA);
         inboundMesg = new InboundMessage(rxPkt, this->rxScheduler, homaConfig);
         incompleteMesgs[rxPkt->getMsgId()] = inboundMesg;
-
+        // if(rxPkt->getDestAddr().toIPv4().getDByte(3) == 145) {
+        //     std::cout << simTime() << " src address: " << rxPkt->getSrcAddr().toIPv4()
+        //      << " dst addr: " << rxPkt->getDestAddr().toIPv4()
+        //     << " receive grant" << std::endl;
+        // }
         // There will be other unsched pkts arriving after this unsched. pkt
         // that we need to account for them.
         std::vector<uint32_t>& prioUnschedBytes =
@@ -1814,7 +1858,7 @@ HomaTransport::ReceiveScheduler::SenderState::handleInboundPkt(HomaPkt* rxPkt)
  */
 int
 HomaTransport::ReceiveScheduler::SenderState::sendAndScheduleGrant(
-        uint32_t grantPrio)
+        uint32_t grantPrio, std::string upperFunc)
 {
     simtime_t currentTime = simTime();
     auto topMesgIt = mesgsToGrant.begin();
@@ -1834,9 +1878,18 @@ HomaTransport::ReceiveScheduler::SenderState::sendAndScheduleGrant(
     }
 
     if (topMesg->totalBytesInFlight >= homaConfig->maxOutstandingRecvBytes) {
+        // std::cout << simTime() << " first place bytes to grant: " << topMesg->bytesToGrant << 
+        // " message inflight: " << topMesg->totalBytesInFlight  
+        // << "maxOutstandingRecvBytes: "<< homaConfig->maxOutstandingRecvBytes << std::endl;
         return 0;
     }
-
+    // if(upperFunc != "handlePktArrival") {
+    //     std::cout << upperFunc << " " << topMesg->totalBytesInFlight  << std::endl;
+    //     assert(false);
+    // }
+    // std::cout << simTime() << " first place bytes to grant: " << topMesg->bytesToGrant << 
+    // " message inflight: " << topMesg->totalBytesInFlight  
+    // << "maxOutstandingRecvBytes: "<< homaConfig->maxOutstandingRecvBytes << std::endl;
     uint16_t grantSize =
         std::min(topMesg->bytesToGrant, homaConfig->grantMaxBytes);
     HomaPkt* grantPkt = topMesg->prepareGrant(grantSize, grantPrio);
@@ -1850,10 +1903,20 @@ HomaTransport::ReceiveScheduler::SenderState::sendAndScheduleGrant(
     rxScheduler->transport->sxController.sendOrQueue(grantPkt);
     rxScheduler->transport->emit(outstandingGrantBytesSignal,
         rxScheduler->transport->outstandingGrantBytes);
+    //if(topMesg->destAddr.toIPv4().getDByte(3) == 185) {
+     //   std::cout << simTime() << " send grant: message src address: " << topMesg->srcAddr << " dst addr: " << topMesg->destAddr
+      //  << " " << prio << std::endl;
+    //}
     if (topMesg->bytesToGrant > 0) {
+        // std::cout << simTime() << " bytes to grant: " << topMesg->bytesToGrant << 
+        // " message inflight: " << topMesg->totalBytesInFlight  
+        // << "maxOutstandingRecvBytes: "<< homaConfig->maxOutstandingRecvBytes << std::endl;
+
         if (topMesg->totalBytesInFlight < homaConfig->maxOutstandingRecvBytes) {
             rxScheduler->transport->scheduleAt(
             getNextGrantTime(currentTime, grantSize), grantTimer);
+            // std::cout << simTime() << " schedule grant timer: " << topMesg->srcAddr << std::endl;
+
         }
         return topMesg->bytesToGrant;
     }
@@ -2197,6 +2260,8 @@ void
 HomaTransport::ReceiveScheduler::SchedSenders::handlePktArrivalEvent(
     SchedState& old, SchedState& cur)
 {
+    // std::cout << simTime() << " num grant:" << old.numToGrant <<
+    //  " head index" << old.headIdx << " number of senders: "<< old.numSenders << std::endl;
     if (cur.sInd < 0) {
 
         if (old.sInd < 0 || old.sInd >= (old.numToGrant + old.headIdx)) {
@@ -2218,8 +2283,7 @@ HomaTransport::ReceiveScheduler::SchedSenders::handlePktArrivalEvent(
             old = cur;
             old.s = sToGrant;
             old.sInd = indToGrant;
-
-            sToGrant->sendAndScheduleGrant(getPrioForMesg(old));
+            sToGrant->sendAndScheduleGrant(getPrioForMesg(old), "handlePktArrival");
 
             auto ret = insPoint(sToGrant);
             cur.numToGrant = numToGrant;
@@ -2228,6 +2292,7 @@ HomaTransport::ReceiveScheduler::SchedSenders::handlePktArrivalEvent(
             cur.numSenders = std::get<2>(ret);
             cur.s = sToGrant;
             handleGrantSentEvent(old, cur);
+            // std::cout << simTime() << " firstcase: " << cur.numToGrant << std::endl;
 
             return;
         }
@@ -2250,7 +2315,7 @@ HomaTransport::ReceiveScheduler::SchedSenders::handlePktArrivalEvent(
             old.s = sToGrant;
             old.sInd = indToGrant;
 
-            sToGrant->sendAndScheduleGrant(getPrioForMesg(old));
+            sToGrant->sendAndScheduleGrant(getPrioForMesg(old), "handlePktArrival");
 
             auto ret = insPoint(sToGrant);
             cur.numToGrant = numToGrant;
@@ -2259,6 +2324,8 @@ HomaTransport::ReceiveScheduler::SchedSenders::handlePktArrivalEvent(
             cur.numSenders = std::get<2>(ret);
             cur.s = sToGrant;
             handleGrantSentEvent(old, cur);
+            // std::cout << simTime() << " secondcase: " << cur.numToGrant << std::endl;
+
             return;
         }
         throw cRuntimeError("invalid old position for sender in the receiver's"
@@ -2267,12 +2334,14 @@ HomaTransport::ReceiveScheduler::SchedSenders::handlePktArrivalEvent(
 
     if (cur.sInd < cur.headIdx + cur.numToGrant) {
         old = cur;
-        cur.s->sendAndScheduleGrant(getPrioForMesg(old));
+        cur.s->sendAndScheduleGrant(getPrioForMesg(old), "handlePktArrival");
         auto ret = insPoint(cur.s);
         cur.sInd = std::get<0>(ret);
         cur.headIdx = std::get<1>(ret);
         cur.numSenders = std::get<2>(ret);
         handleGrantSentEvent(old, cur);
+            // std::cout << simTime() << " thirdcase: " << cur.numToGrant << std::endl;
+
         return;
     }
 
@@ -2322,7 +2391,7 @@ HomaTransport::ReceiveScheduler::SchedSenders::handleGrantSentEvent(
         old.s = sToGrant;
         old.sInd = indToGrant;
 
-        sToGrant->sendAndScheduleGrant(getPrioForMesg(old));
+        sToGrant->sendAndScheduleGrant(getPrioForMesg(old), "handleGrantSent");
 
         auto ret = insPoint(sToGrant);
         cur.numToGrant = numToGrant;
@@ -2368,7 +2437,7 @@ HomaTransport::ReceiveScheduler::SchedSenders::handleGrantTimerEvent(
     old.s = s;
     old.sInd = sInd;
 
-    s->sendAndScheduleGrant(getPrioForMesg(old));
+    s->sendAndScheduleGrant(getPrioForMesg(old), "handleGrantTimer");
 
     ret = insPoint(s);
     cur.numToGrant = numToGrant;
@@ -2436,10 +2505,10 @@ HomaTransport::ReceiveScheduler::SchedSenders::handleBwUtilTimerEvent(
     ASSERT(topMesg->bytesToGrant > 0);
     // End runtime checks
 
-    lowPrioSx->sendAndScheduleGrant(getPrioForMesg(old));
+    lowPrioSx->sendAndScheduleGrant(getPrioForMesg(old), "BWUtil");
 
     // we have previously incremented overcommittment level
-    lowPrioSx->sendAndScheduleGrant(getPrioForMesg(old));
+    lowPrioSx->sendAndScheduleGrant(getPrioForMesg(old), "BWUtil");
     auto ret = insPoint(lowPrioSx);
     cur.setVar(numToGrant, std::get<1>(ret), std::get<2>(ret),
         lowPrioSx, std::get<0>(ret));
@@ -2667,6 +2736,8 @@ HomaTransport::InboundMessage::fillinRxBytes(uint32_t byteStart,
     bytesToReceive -= bytesReceived;
     totalBytesInFlight -= bytesReceivedOnWire;
     totalBytesOnWire += bytesReceivedOnWire;
+    total_outstanding_bytes -= bytesReceived;
+
 
     if (pktType == PktType::UNSCHED_DATA || pktType == PktType::REQUEST) {
         // update inflight grants list

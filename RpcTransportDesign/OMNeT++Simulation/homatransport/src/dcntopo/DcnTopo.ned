@@ -59,8 +59,7 @@ network DcnTopo
         // Enables the cut-through switching wherever possible
         bool isFabricCutThrough = default(false);
 
-        int numAggSwitches = (numServersPerTor * nicLinkSpeed) /
-                (overSubFactor * fabricLinkSpeed);
+        int numAggSwitches = 4;
         int numHosts = numServersPerTor * numTors;
 
         // Set parameters to enablle random spray multipath routing
