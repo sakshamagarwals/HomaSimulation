@@ -567,11 +567,8 @@ WorkloadSynthesizer::processRcvdMsg(cPacket* msg)
     //
     inet::L3Address srcAddr = rcvdMsg->getSrcAddr();
     inet::L3Address destAddr = rcvdMsg->getDestAddr();
-
-    int srcId = srcAddr.toIPv4().getDByte(2) * 16 + srcAddr.toIPv4().getDByte(3);
-    int dstId = destAddr.toIPv4().getDByte(2) * 16 + destAddr.toIPv4().getDByte(3);
     
-    outputFile  << srcId << " " << dstId << " " << msgByteLen << " " << rcvdMsg->getMsgCreationTime().dbl() << " " << simTime() << " " 
+    outputFile  << (srcAddr.toIPv4().getDByte(2) ==  destAddr.toIPv4().getDByte(2)) << " " << msgByteLen << " " << rcvdMsg->getMsgCreationTime().dbl() << " " << simTime() << " " 
     << completionTime.dbl() << std::endl;
     outputFile.flush();
     delete rcvdMsg;
@@ -603,7 +600,7 @@ WorkloadSynthesizer::idealMsgEndToEndDelay(AppMessage* rcvdMsg)
     uint32_t lastPartialFrameData =
             rcvdMsg->getByteLength() % maxDataBytesPerEthFrame;
 
-    totalBytesTranmitted = numFullEthFrame *
+   totalBytesTranmitted = numFullEthFrame *
             (MAX_ETHERNET_PAYLOAD_BYTES + ETHERNET_HDR_SIZE +
             ETHERNET_CRC_SIZE + ETHERNET_PREAMBLE_SIZE + INTER_PKT_GAP);
 
@@ -627,7 +624,7 @@ WorkloadSynthesizer::idealMsgEndToEndDelay(AppMessage* rcvdMsg)
         totalBytesTranmitted += lastPartialFrameLen;
     }
 
-    //double msgSerializationDelay =
+//double msgSerializationDelay =
       //      1e-9 * ((totalBytesTranmitted << 3) * 1.0 / nicLinkSpeed);
 
     double msgSerializationDelay =
