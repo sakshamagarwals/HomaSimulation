@@ -2071,6 +2071,10 @@ void IPv4NetworkConfigurator::optimizeRoutes(std::vector<IPv4Route *>& originalR
     for (int i = 0; i < (int)originalRoutes.size(); i++)
         delete originalRoutes.at(i);
 
+    for (int i = 0; i < (int)originalRouteInfos.size(); i++) {
+        delete originalRouteInfos.at(i);
+
+    }
     // copy optimized routes to original routes and return
     originalRoutes = optimizedRoutes;
 }

@@ -568,9 +568,6 @@ WorkloadSynthesizer::processRcvdMsg(cPacket* msg)
     inet::L3Address srcAddr = rcvdMsg->getSrcAddr();
     inet::L3Address destAddr = rcvdMsg->getDestAddr();
     
-    outputFile  << (srcAddr.toIPv4().getDByte(2) ==  destAddr.toIPv4().getDByte(2)) << " " << msgByteLen << " " << rcvdMsg->getMsgCreationTime().dbl() << " " << simTime() << " " 
-    << completionTime.dbl() << std::endl;
-    outputFile.flush();
     delete rcvdMsg;
     numReceived++;
 }

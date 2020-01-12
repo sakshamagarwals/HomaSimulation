@@ -81,7 +81,10 @@ uint16_t
 PriorityResolver::getSchedPktPrio(const InboundMessage* inbndMsg)
 {
     uint32_t msgSize = inbndMsg->msgSize;
-    uint32_t bytesToGrant = inbndMsg->bytesToGrant;
+    uint32_t bytesToGrant = inbndMsg->EstimateRemainingSize();
+    //uint32_t bytesToGrant = inbndMsg->bytesToGrant;
+    // to do for retransmitting packet; the priority should be different
+    // std::cout << bytesToGrant << std::endl;
     uint32_t bytesToGrantOnWire = HomaPkt::getBytesOnWire(bytesToGrant,
         PktType::SCHED_DATA);                                 
     uint32_t bytesTreatedUnsched = homaConfig->boostTailBytesPrio;

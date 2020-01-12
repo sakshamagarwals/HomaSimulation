@@ -57,7 +57,6 @@ class HomaTransport : public cSimpleModule
 
     class SendController;
     class ReceiveScheduler;
-
     /**
      * Represents and handles transmiting a message from the senders side.
      * For each message represented by this class, this class exposes the api
@@ -77,6 +76,7 @@ class HomaTransport : public cSimpleModule
         void prepareRequestAndUnsched();
         uint32_t prepareSchedPkt(uint32_t offset, uint16_t numBytes,
             uint16_t schedPrio);
+
 
       PUBLIC:
         /**
@@ -101,6 +101,8 @@ class HomaTransport : public cSimpleModule
         const OutbndPktQueue& getTxPktQueue() {return txPkts;}
         const std::unordered_set<HomaPkt*>& getTxSchedPkts()
             {return txSchedPkts;}
+
+        // to do: change the way of clean up the outboundmessage
         const uint32_t getBytesLeft() { return bytesLeft; }
         const simtime_t getMsgCreationTime() { return msgCreationTime; }
         bool getTransmitReadyPkt(HomaPkt** outPkt);
@@ -187,6 +189,7 @@ class HomaTransport : public cSimpleModule
             PriorityResolver* prioResolver);
         void processSendMsgFromApp(AppMessage* msg);
         void processReceivedGrant(HomaPkt* rxPkt);
+        void processReceivedAck(HomaPkt* rxPkt);
         OutboundMsgMap* getOutboundMsgMap() {return &outboundMsgMap;}
         void sendOrQueue(cMessage* msg = NULL);
         void handlePktTransmitEnd();
@@ -289,6 +292,15 @@ class HomaTransport : public cSimpleModule
         explicit InboundMessage(HomaPkt* rxPkt, ReceiveScheduler* rxScheduler,
             HomaConfigDepot* homaConfig);
         ~InboundMessage();
+        uint32_t FindNextGrantOffset();
+        uint32_t EstimateRemainingSize() const {
+            if (bytesToReceive < bytesGrantedInFlight)
+                return 0;
+            else
+                return  bytesToReceive - bytesGrantedInFlight;
+        };
+        uint32_t getNextGrantSize();
+        std::vector<uint16_t> getReqUnschedDataPkts(uint32_t msgSize);
 
       PUBLIC:
         typedef std::list<std::tuple<uint32_t, uint16_t, simtime_t>> GrantList;
@@ -316,13 +328,17 @@ class HomaTransport : public cSimpleModule
             bool operator()(const InboundMessage* msg1,
                 const InboundMessage* msg2)
             {
-                return (msg1->bytesToGrant < msg2->bytesToGrant) ||
-                    (msg1->bytesToGrant == msg2->bytesToGrant &&
+                if(msg2 == NULL)
+                    return false;
+                if(msg1 == NULL)
+                    return true;
+                return (msg1->EstimateRemainingSize() < msg2->EstimateRemainingSize()) ||
+                    (msg1->EstimateRemainingSize() == msg2->EstimateRemainingSize() &&
                         msg1->msgSize < msg2->msgSize) ||
-                    (msg1->bytesToGrant == msg2->bytesToGrant &&
+                    (msg1->EstimateRemainingSize() == msg2->EstimateRemainingSize() &&
                         msg1->msgSize == msg2->msgSize &&
                         msg1->msgCreationTime < msg2->msgCreationTime) ||
-                    (msg1->bytesToGrant == msg2->bytesToGrant &&
+                    (msg1->EstimateRemainingSize() == msg2->EstimateRemainingSize() &&
                         msg1->msgSize == msg2->msgSize &&
                         msg1->msgCreationTime == msg2->msgCreationTime &&
                         msg1->msgIdAtSender < msg2->msgIdAtSender);
@@ -344,10 +360,23 @@ class HomaTransport : public cSimpleModule
         // specify the sources address when grant packets are being sent.
         inet::L3Address destAddr;
 
+        // rtxTimer
+        cMessage* rtxTimer;
+
+        // finish timeout to seperate window timeout
+        bool isFinishTimeout;
+
+        // window timeout
+        bool isWindowTimeout;
+
+        // short flows has been retransmitted
+        bool isMesgSched;
+
         // The id of this message at the sender host. Used in the grant packets
         // to help the sender identify which outbound message a received grant
         // belongs to.
         uint64_t msgIdAtSender;
+
 
         // Tracks the total number of grant bytes that the rxScheduler should
         // send for this message.
@@ -441,6 +470,8 @@ class HomaTransport : public cSimpleModule
         uint32_t schedBytesInFlight();
         uint32_t unschedBytesInFlight();
         HomaPkt* prepareGrant(uint16_t grantSize, uint16_t schedPrio);
+        HomaPkt* prepareAck();
+
         AppMessage* prepareRxMsgForApp();
         void updatePerPrioStats();
     };
@@ -489,8 +520,10 @@ class HomaTransport : public cSimpleModule
             }
             simtime_t getNextGrantTime(simtime_t currentTime,
                 uint32_t grantSize);
+            simtime_t getNextRtxTime(InboundMessage* inboundMesg, simtime_t currentTime);
             int sendAndScheduleGrant(uint32_t grantPrio, std::string upperFunc);
             std::pair<bool, int> handleInboundPkt(HomaPkt* rxPkt);
+            void handleRtxTimerEvent(cMessage* rtxTimer);
 
           PROTECTED:
             HomaConfigDepot* homaConfig;
@@ -508,6 +541,11 @@ class HomaTransport : public cSimpleModule
 
             // Map of all incomplete inboundMsgs from the sender hashed by msgId
             std::unordered_map<uint64_t, InboundMessage*> incompleteMesgs;
+
+
+            // Hash container for accessing each rtx flow using
+            // from the rtx timer object of the inboundmessage.
+            std::unordered_map<cMessage*, InboundMessage*> rtxTimersMap;
 
             // Priority of last sent grant for this sender
             uint32_t lastGrantPrio;
@@ -661,6 +699,10 @@ class HomaTransport : public cSimpleModule
         // from the grant timer object of the sender.
         std::unordered_map<cMessage*, SenderState*> grantTimersMap;
 
+        // Hash container for accessing each rtx flow using
+        // from the rtx timer object of the SenderState.
+        std::unordered_map<cMessage*, SenderState*> rtxTimersMap;
+
         // Collection of all senders that have at least one message that is not
         // fully granted.
         SchedSenders* schedSenders;
@@ -749,7 +791,7 @@ class HomaTransport : public cSimpleModule
             PriorityResolver* prioResolver);
         void processReceivedPkt(HomaPkt* rxPkt);
         void processGrantTimers(cMessage* grantTimer);
-
+        void processRtxTimers(cMessage* rtxTimer);
         inline uint64_t getInflightBytes()
         {
             return inflightUnschedBytes + inflightSchedBytes;
@@ -824,7 +866,8 @@ class HomaTransport : public cSimpleModule
         SEND  = 3,   // For the send timer, under normal transmit state.
         EMITTER = 4, // When emitSignalTimer is ready to be scheduled.
         BW_CHECK = 5,// For schedBwUtilTimer, when it's active.
-        STOP  = 6    // When trasnport shutting down and in the cleaning phase.
+        STOP  = 6,    // When trasnport shutting down and in the cleaning phase.
+        RTX = 7 // Retransmission timer per flow
     };
 
   PUBLIC:

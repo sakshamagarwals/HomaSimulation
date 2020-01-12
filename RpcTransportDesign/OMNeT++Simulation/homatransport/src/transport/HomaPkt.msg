@@ -27,6 +27,7 @@ enum PktType
     GRANT = 1;
     SCHED_DATA = 2;
     UNSCHED_DATA = 3;
+    HOMA_ACK = 4;
 };
 
 struct UnschedFields
@@ -62,6 +63,7 @@ struct GrantFields
 
     // [(uint32_t size_upper_bound, uint16_t unsched_byte, uint16_t prio)]
     UnsignedVec sizeUnschedBytesPrio;
+    uint32_t remainingSize;
 };
 
 struct SchedDataFields

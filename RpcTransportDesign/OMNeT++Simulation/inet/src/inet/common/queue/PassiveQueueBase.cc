@@ -90,8 +90,10 @@ void PassiveQueueBase::handleMessage(cMessage *msg)
                 case PktType::UNSCHED_DATA:
                     emit(unschedDataQueueingTimeSignal, SIMTIME_ZERO);
                     break;
+                case PktType::HOMA_ACK:
+                    break;
                 default:
-                    throw cRuntimeError("HomaPkt arrived at the queue has unknown type.");
+                    throw cRuntimeError("HomaPkt arrived at the queue has unknown type:%d ", homaPkt->getPktType());
             }
         }
         setTxPktDuration(pkt->getByteLength());
@@ -149,8 +151,10 @@ void PassiveQueueBase::requestPacket()
                 case PktType::UNSCHED_DATA:
                     emit(unschedDataQueueingTimeSignal, simTime() - msg->getArrivalTime());
                     break;
+                case PktType::HOMA_ACK:
+                    break;
                 default:
-                    throw cRuntimeError("HomaPkt arrived at the queue has unknown type.");
+                    throw cRuntimeError("HomaPkt arrived at the queue has unknown type: %d ",check_and_cast<HomaPkt*>(encapedHomaPkt)->getPktType());
             }
         }
         setTxPktDuration(pkt->getByteLength());

@@ -108,6 +108,8 @@ HomaPkt::getDataBytes()
                 this->getSchedDataFields().firstByte + 1;
         case PktType::GRANT:
             return 0;
+        case PktType::HOMA_ACK:
+            return 0;
         default:
             throw cRuntimeError("PktType %d not defined", this->getPktType());
     }

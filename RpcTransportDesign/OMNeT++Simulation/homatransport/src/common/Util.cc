@@ -36,8 +36,13 @@ HomaMsgSizeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t,
                     transport->rxScheduler.lookupInboundMesg(homaPkt))) {
                 msgSize = inbndMsg->getMsgSize();
             } else {
+                if (transport->sxController.getOutboundMsgMap()->find(homaPkt->getMsgId())
+                 == transport->sxController.getOutboundMsgMap()->end()) {
+                   return;
+                }
                 outMsg = &(transport->sxController.getOutboundMsgMap()->at(
                     homaPkt->getMsgId()));
+                ASSERT(outMsg != NULL);
                 ASSERT((transport->getLocalAddr() == homaPkt->getDestAddr()
                     && pktType == PktType::GRANT) ||
                     (transport->getLocalAddr() == homaPkt->getSrcAddr()
@@ -46,11 +51,15 @@ HomaMsgSizeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t,
             }
             break;
         }
+        case PktType::HOMA_ACK:
+
+            return;
         default:
             throw cRuntimeError("PktType %d is not known!", pktType);
 
     }
     fire(this,  t , (double)msgSize);
+
 }
 
 void
@@ -60,12 +69,14 @@ HomaPktBytesFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t,
     HomaPkt* homaPkt = check_and_cast<HomaPkt*>(object);
     fire(this, t, (double)HomaPkt::getBytesOnWire(homaPkt->getDataBytes(),
         (PktType)homaPkt->getPktType()));
+
 }
 
 void
 HomaUnschedPktBytesFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t,
         cObject *object)
 {
+
     HomaPkt* homaPkt = check_and_cast<HomaPkt*>(object);
     switch (homaPkt->getPktType()) {
         case PktType::REQUEST:

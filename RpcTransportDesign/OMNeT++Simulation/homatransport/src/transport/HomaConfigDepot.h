@@ -49,6 +49,11 @@ class HomaConfigDepot {
     // RTT is computed as travel time of a full ethernet frame in one way and a
     // short grant packet in the other way, on the longest path in the topology.
     simtime_t rtt;
+
+    // windowTimeout
+    simtime_t windowTimeout;
+    // finishTimeout
+    simtime_t finishTimeout;
     // RTT in bytes for the topology, given as a configuration parameter.
     uint16_t rttBytes;
 
