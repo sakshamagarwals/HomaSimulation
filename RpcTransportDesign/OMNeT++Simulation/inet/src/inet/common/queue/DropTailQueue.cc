@@ -63,9 +63,9 @@ cMessage *DropTailQueue::enqueue(cMessage *msg)
         txRate = dynamic_cast<EtherMACBase*>(mac)->getTxRate();
     }
 
-    if (frameCapacity && queue.length() >= frameCapacity) {
+    if (frameCapacity && queue.getByteLength() >= frameCapacity * 1000.0) {
         EV << "Queue full, dropping packet.\n";
-        std::cout << simTime() << " Queue full, dropping packet.\n";
+       // std::cout << simTime() << " Queue full, dropping packet.\n";
 
         // std::cout << "paket drop" << check_and_cast<cPacket*>(msg)->str() << std::endl;
         return msg;
