@@ -102,16 +102,16 @@ void PassiveQueueBase::handleMessage(cMessage *msg)
     else {
         msg->setArrivalTime(simTime());
         cMessage *droppedMsg = enqueue(msg);
-        if (msg != droppedMsg)
-            emit(enqueuePkSignal, msg);
+       // if (msg != droppedMsg)
+       //     emit(enqueuePkSignal, msg);
 
-        if (droppedMsg) {
-            numQueueDropped++;
-            emit(dropPkByQueueSignal, droppedMsg);
-            delete droppedMsg;
-        }
-        else
-            notifyListeners();
+       // if (droppedMsg) {
+       //     numQueueDropped++;
+       //     emit(dropPkByQueueSignal, droppedMsg);
+       //     delete droppedMsg;
+       // }
+       // else
+        //    notifyListeners();
     }
 
     if (ev.isGUI()) {

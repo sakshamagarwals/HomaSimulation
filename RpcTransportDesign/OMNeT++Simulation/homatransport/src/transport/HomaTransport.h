@@ -294,10 +294,11 @@ class HomaTransport : public cSimpleModule
         ~InboundMessage();
         uint32_t FindNextGrantOffset();
         uint32_t EstimateRemainingSize() const {
-            if (bytesToReceive < bytesGrantedInFlight)
-                return 0;
-            else
-                return  bytesToReceive - bytesGrantedInFlight;
+            return bytesToReceive;
+            // if (bytesToReceive < bytesGrantedInFlight)
+            //     return 0;
+            // else
+            //     return  bytesToReceive - bytesGrantedInFlight;
         };
         uint32_t getNextGrantSize();
         std::vector<uint16_t> getReqUnschedDataPkts(uint32_t msgSize);

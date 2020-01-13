@@ -24,7 +24,7 @@
 
 extern uint64_t total_outstanding_bytes;
 extern std::ofstream outputFile;
-
+int total_flow = 15;
 // Required by OMNeT++ for all simple modules.
 Define_Module(HomaTransport);
 // double totalsentPkt = 0;
@@ -35,6 +35,7 @@ Define_Module(HomaTransport);
 /**
  * Registering all statistics collection signals.
  */
+
 simsignal_t HomaTransport::msgsLeftToSendSignal =
         registerSignal("msgsLeftToSend");
 simsignal_t HomaTransport::stabilitySignal =
@@ -1083,10 +1084,16 @@ HomaTransport::OutboundMessage::prepareRequestAndUnsched()
                 break;
             }
         }
+
         unschedPkt->setUnschedFields(unschedFields);
         unschedPkt->setByteLength(unschedPkt->headerSize() +
             unschedPkt->getDataBytes());
         txPkts.push(unschedPkt);
+        // if(pktType == PktType::REQUEST) {
+
+
+        //     ASSERT( unschedPkt->getPriority() == 0);
+        // }
         /**
         EV << "Unsched pkt with msgId " << this->msgId << " ready for"
             " transmit from " << this->srcAddr.str() << " to " <<
@@ -1800,8 +1807,6 @@ HomaTransport::ReceiveScheduler::SenderState::getNextRtxTime(InboundMessage* inb
         rtxTime +=   homaConfig->windowTimeout;
     } else if (inboundMesg->isFinishTimeout) {
         rtxTime += homaConfig->finishTimeout;
-    } else {
-        ASSERT(false);
     }
 
     return rtxTime;
@@ -1821,12 +1826,10 @@ void HomaTransport::ReceiveScheduler::SenderState::handleRtxTimerEvent(cMessage*
     uint32_t bytesReceivedOnWire =
         HomaPkt::getBytesOnWire(homaConfig->grantMaxBytes, PktType::SCHED_DATA);
     if(inboundMesg->isWindowTimeout) {
-        if (inboundMesg->totalBytesInFlight > bytesReceivedOnWire) {
-            inboundMesg->totalBytesInFlight -= bytesReceivedOnWire;
-        }
-        else {
-            inboundMesg->totalBytesInFlight = 0;
-        }
+        ASSERT(mesgsToGrant.find(inboundMesg) != mesgsToGrant.end());
+
+        inboundMesg->totalBytesInFlight = homaConfig->maxOutstandingRecvBytes - bytesReceivedOnWire;
+
         if (inboundMesg->bytesGrantedInFlight > homaConfig->grantMaxBytes) {
             inboundMesg->bytesGrantedInFlight -= homaConfig->grantMaxBytes;
         } else {
@@ -1914,10 +1917,16 @@ HomaTransport::ReceiveScheduler::SenderState::handleInboundPkt(HomaPkt* rxPkt)
         inboundMesg = new InboundMessage(rxPkt, this->rxScheduler, homaConfig);
         incompleteMesgs[rxPkt->getMsgId()] = inboundMesg;
         rtxTimersMap[inboundMesg->rtxTimer] = inboundMesg;
-
+        
         if(!inboundMesg->isMesgSched) {
             ASSERT(!inboundMesg->isWindowTimeout);
             inboundMesg->isFinishTimeout = true;
+            rxScheduler->rtxTimersMap[inboundMesg->rtxTimer] = this;
+            rxScheduler->transport->scheduleAt(
+            getNextRtxTime(inboundMesg, simTime()), inboundMesg->rtxTimer);
+        } else {
+            ASSERT(!inboundMesg->isWindowTimeout);
+            inboundMesg->isWindowTimeout = true;
             rxScheduler->rtxTimersMap[inboundMesg->rtxTimer] = this;
             rxScheduler->transport->scheduleAt(
             getNextRtxTime(inboundMesg, simTime()), inboundMesg->rtxTimer);
@@ -2019,6 +2028,7 @@ HomaTransport::ReceiveScheduler::SenderState::handleInboundPkt(HomaPkt* rxPkt)
 #endif
         // std::cout <<  simTime() << "inboundMesg finish!: " << inboundMesg->msgIdAtSender << std::endl;
         // mesgsToGrant.erase(inboundMesg);
+        total_flow -= 1;
         rtxTimersMap.erase(inboundMesg->rtxTimer);
         // remove this message from the incompleteRxMsgs
         incompleteMesgs.erase(inboundMesg->msgIdAtSender);
@@ -2093,6 +2103,7 @@ HomaTransport::ReceiveScheduler::SenderState::sendAndScheduleGrant(
     uint16_t resolverPrio =
         rxScheduler->transport->prioResolver->getSchedPktPrio(topMesg);
     grantPrio = std::min(grantPrio, (uint32_t)resolverPrio);
+
     if (grantTimer->isScheduled()){
         if (lastGrantPrio <= grantPrio) {
             return 0;
@@ -2102,8 +2113,10 @@ HomaTransport::ReceiveScheduler::SenderState::sendAndScheduleGrant(
 
     if (topMesg->totalBytesInFlight >= homaConfig->maxOutstandingRecvBytes) {
         // to do: need to set up the timeout
-        if (topMesg->isWindowTimeout)
+        if (topMesg->isWindowTimeout) {
+
             return 0;
+        }
         ASSERT(!topMesg->isFinishTimeout);
         topMesg->isWindowTimeout = true;
         rxScheduler->rtxTimersMap[topMesg->rtxTimer] = this;
@@ -2131,12 +2144,13 @@ HomaTransport::ReceiveScheduler::SenderState::sendAndScheduleGrant(
 
     // to do: need to check finish timeout
     uint32_t nextOffset = topMesg->FindNextGrantOffset();
-    if(nextOffset < grantPkt->getGrantFields().offset) {
+    if(nextOffset <= grantPkt->getGrantFields().offset) {
         ASSERT(!topMesg->isWindowTimeout);
         topMesg->isFinishTimeout = true;
         rxScheduler->rtxTimersMap[topMesg->rtxTimer] = this;
         rxScheduler->transport->scheduleAt(
         getNextRtxTime(topMesg ,currentTime), topMesg->rtxTimer);
+
     }
     if(!topMesg->isFinishTimeout) {
     // if (topMesg->bytesToGrant > 0) {
@@ -2155,8 +2169,9 @@ HomaTransport::ReceiveScheduler::SenderState::sendAndScheduleGrant(
         // if(getSenderAddr() == inet::IPv4Address("10.0.8.29")) {
         //     std::cout << simTime() << " flow finishtimeout " << topMesg->msgIdAtSender << std::endl;
         // }
+
         return topMesg->EstimateRemainingSize();
-    }
+    } 
     size_t num_removed = mesgsToGrant.erase(topMesg);
     ASSERT(num_removed == 1);
     if (mesgsToGrant.empty()) {
@@ -2336,12 +2351,9 @@ HomaTransport::ReceiveScheduler::SenderState*
 HomaTransport::ReceiveScheduler::SchedSenders::removeAt(uint32_t rmIdx)
 {
     if (rmIdx < headIdx || rmIdx >= (headIdx + numSenders)) {
-        std::cout <<  "rmIdx" << rmIdx << std::endl;
-        std::cout <<  "headIdx + numSenders" << headIdx + numSenders << std::endl;
 
         EV << "Objects are within range [" << headIdx << ", " <<
             headIdx + numSenders << "). Can't remove at rmIdx " << rmIdx;
-        std::cout << " are not widthin the range " << std::endl;
         return NULL;
     }
     numSenders--;
@@ -2548,17 +2560,13 @@ HomaTransport::ReceiveScheduler::SchedSenders::handlePktArrivalEvent(
     // std::cout << simTime() << " num grant:" << old.numToGrant <<
     //  " head index" << old.headIdx << " number of senders: "<< old.numSenders << std::endl;
     if (cur.sInd < 0) {
-
         if (old.sInd < 0 || old.sInd >= (old.numToGrant + old.headIdx)) {
             return;
         }
         if (numSenders == 0) {
             return;
         }
-        // std::cout << simTime() << " old.numToGrant" << old.numToGrant << std::endl;
-        // std::cout << " old.headIdx" << old.headIdx << std::endl;
 
-        // std::cout << "old.sInd " << old.sInd << std::endl; 
         if (old.sInd >= old.headIdx &&
                 old.sInd < old.numToGrant + old.headIdx) {
             int indToGrant;
@@ -2584,7 +2592,6 @@ HomaTransport::ReceiveScheduler::SchedSenders::handlePktArrivalEvent(
             cur.numSenders = std::get<2>(ret);
             cur.s = sToGrant;
             handleGrantSentEvent(old, cur);
-            // std::cout << simTime() << " firstcase: " << cur.numToGrant << std::endl;
 
             return;
         }
@@ -2597,20 +2604,11 @@ HomaTransport::ReceiveScheduler::SchedSenders::handlePktArrivalEvent(
             insert(cur.s);
             return;
         }
-
         if (old.sInd >= old.headIdx && old.sInd < old.numToGrant + old.headIdx) {
             insert(cur.s);
             int indToGrant = cur.headIdx + cur.numToGrant - 1;
             SenderState* sToGrant = removeAt(indToGrant);
 
-            if(sToGrant == cur.s) {
-                std::cout << simTime() << " number of messages: " << cur.s->mesgsToGrant.size() << std::endl;
-                std::cout << simTime() << "old index: " << old.sInd << std::endl;
-                std::cout << simTime() <<  "new index: " << cur.sInd << std::endl;
-                std::cout << simTime() <<  "indToGrant : " << indToGrant << std::endl;
-                std::cout << simTime() << sToGrant->getSenderAddr() << std::endl;
-                std::cout << simTime() << " num senders: " << numSenders << std::endl;
-            }
             old = cur;
             old.s = sToGrant;
             old.sInd = indToGrant;
@@ -2680,7 +2678,6 @@ HomaTransport::ReceiveScheduler::SchedSenders::handleGrantSentEvent(
         throw cRuntimeError("Error, sender has invalid position in receiver's "
             "preference list.");
     }
-
     if (cur.sInd >= 0) {
         insert(cur.s);
     }
@@ -2694,6 +2691,7 @@ HomaTransport::ReceiveScheduler::SchedSenders::handleGrantSentEvent(
         old.sInd = indToGrant;
         ASSERT(sToGrant != NULL);
         ASSERT(sToGrant != cur.s);
+
         sToGrant->sendAndScheduleGrant(getPrioForMesg(old), "handleGrantSent");
 
         auto ret = insPoint(sToGrant);
@@ -2703,7 +2701,7 @@ HomaTransport::ReceiveScheduler::SchedSenders::handleGrantSentEvent(
         cur.numSenders = std::get<2>(ret);
         cur.s = sToGrant;
         handleGrantSentEvent(old, cur);
-    }
+    } 
     EV << "SchedState before handleGrantSent:\n\t" << old << endl;
     EV << "SchedState after handleGrantSent:\n\t" << cur << endl;
     return;
@@ -2723,8 +2721,9 @@ HomaTransport::ReceiveScheduler::SchedSenders::handleGrantTimerEvent(
     int headInd = std::get<1>(ret);
     int sendersNum = std::get<2>(ret);
 
-    if (sInd < 0)
+    if (sInd < 0) {
         return;
+    }
 
     if (sInd - headInd >= numToGrant) {
         insert(s);

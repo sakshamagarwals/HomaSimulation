@@ -57,7 +57,15 @@ PriorityResolver::getUnschedPktsPrio(const OutboundMessage* outbndMsg)
         case PrioResolutionMode::STATIC_CBF_GRADUATED: {
             std::vector<uint16_t> unschedPktsPrio;
             for (auto& pkt : outbndMsg->reqUnschedDataVec) {
-                unschedPktsPrio.push_back(getMesgPrio(msgSize));
+                // for first packet(assign highest priority to make sure the receiver receives the request)
+                if (msgSize == outbndMsg->msgSize) {
+                    unschedPktsPrio.push_back(getMesgPrio(0));
+                } else {
+                    uint32_t pri = getMesgPrio(msgSize);
+                    if (pri == 0) 
+                        pri += 1;
+                    unschedPktsPrio.push_back(pri);
+                }
                 ASSERT(msgSize >= pkt);
                 msgSize -= pkt;
             }

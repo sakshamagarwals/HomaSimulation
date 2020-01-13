@@ -62,15 +62,38 @@ cMessage *DropTailQueue::enqueue(cMessage *msg)
     if (mac) {
         txRate = dynamic_cast<EtherMACBase*>(mac)->getTxRate();
     }
+    cPacket* pkt = check_and_cast<cPacket*>(msg);
+    queue.insert(pkt);
+    bool isDropped = false;
+    bool isEnqDropped = false;
+    if (frameCapacity && queue.getByteLength() > frameCapacity * 1000.0) {
 
-    if (frameCapacity && queue.getByteLength() >= frameCapacity * 1000.0) {
         EV << "Queue full, dropping packet.\n";
        // std::cout << simTime() << " Queue full, dropping packet.\n";
-
+        isDropped = true;
+        while(queue.getByteLength() > frameCapacity* 1000.0) {
+            cMessage* droppedMsg = (cMessage*)queue.back();
+            queue.remove((cPacket*)droppedMsg);
+            numQueueDropped++;
+            emit(dropPkByQueueSignal, droppedMsg);
+            if(droppedMsg == msg) {
+                isEnqDropped = true;
+            }
+            HomaPkt* pkt = (HomaPkt*)droppedMsg;
+            if(pkt->getPriority() == 0) {
+                std::cout << "packet type: " << pkt->getPktType() << std::endl;
+                assert(false);
+            }
+            delete droppedMsg;       
+         }
         // std::cout << "paket drop" << check_and_cast<cPacket*>(msg)->str() << std::endl;
-        return msg;
+    } else {
+        notifyListeners();
     }
 
+    if(!isEnqDropped) {
+        emit(enqueuePkSignal, msg);
+    }
     // at the queueing time, we check how much of the previous transmitting
     // packet is remained to be serialized and trigger queueLength signals
     // with current queue length and the remainder of that packet.
@@ -98,8 +121,7 @@ cMessage *DropTailQueue::enqueue(cMessage *msg)
     // queueLengthSignal in this file.
     emit(queueLengthSignal, queue.length() + pktOnWire);
     emit(queueByteLengthSignal, queue.getByteLength() + (txPktBitsRemained >> 3));
-    cPacket* pkt = check_and_cast<cPacket*>(msg);
-    queue.insert(pkt);
+
 
     //emit(queueLengthSignal, queue.length());
     //emit(queueByteLengthSignal, queue.getByteLength());
