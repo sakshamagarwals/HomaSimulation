@@ -565,7 +565,7 @@ HomaTransport::SendController::processReceivedGrant(HomaPkt* rxPkt)
     size_t numRemoved = outbndMsgSet.erase(outboundMsg);
     ASSERT(numRemoved <= 1); // At most one item removed
     // set remaining size as byteleft
-    outboundMsg->bytesLeft = rxPkt->getGrantFields().remainingSize;
+    outboundMsg->bytesLeft = std::min (outboundMsg->bytesLeft, rxPkt->getGrantFields().remainingSize);
     // int bytesToSchedOld = outboundMsg->bytesToSched;
     // int bytesToSchedNew = outboundMsg->prepareSchedPkt(
     //     rxPkt->getGrantFields().offset, rxPkt->getGrantFields().grantBytes,
@@ -3163,7 +3163,7 @@ HomaTransport::InboundMessage::fillinRxBytes(uint32_t byteStart,
     // }
 
     // if (pktType == PktType::SCHED_DATA) {
-        ASSERT(byteEnd > byteStart);
+        ASSERT(byteEnd >= byteStart);
         // update inflight grants list
         //std::cout << "first byte: " << byteStart <<
         //    ", last byte: " << byteEnd  << std::endl;
@@ -3179,9 +3179,19 @@ HomaTransport::InboundMessage::fillinRxBytes(uint32_t byteStart,
         // to do: handle duplicate messages
         if(grant == inflightGrants.end()) {
             // to do: this part will be removed later
-            if(pktType == PktType::REQUEST || pktType == PktType::UNSCHED_DATA) {
-                ASSERT(false);
-            }
+            // if(pktType == PktType::REQUEST || pktType == PktType::UNSCHED_DATA) {
+            //     std::cout << "pkt type: " << pktType << std::endl;
+
+            //     std::cout << "messge size: " << this->msgSize << std::endl;
+
+            //     std::cout << "byte start: " << byteStart << std::endl;
+            //     for (grant = inflightGrants.begin(); grant != inflightGrants.end();
+            //             grant++) {
+            //          std::cout << "grant offset: " << std::get<0>(*grant) << std::endl;
+
+            //     }
+            //     ASSERT(false);
+            // }
             return;
         }
         ASSERT(grant != inflightGrants.end());

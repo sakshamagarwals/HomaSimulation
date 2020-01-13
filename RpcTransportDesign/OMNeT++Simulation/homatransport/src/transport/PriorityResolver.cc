@@ -100,7 +100,10 @@ PriorityResolver::getSchedPktPrio(const InboundMessage* inbndMsg)
         case PrioResolutionMode::EXPLICIT:
         case PrioResolutionMode::STATIC_CBF_GRADUATED: {
             if (bytesToGrantOnWire < bytesTreatedUnsched) {
-                return getMesgPrio(bytesToGrant);
+                uint32_t pri = getMesgPrio(bytesToGrant);
+                if (pri == 0) 
+                    pri += 1;
+                return pri;
             } else {
                 return homaConfig->allPrio-1;
             }
@@ -108,7 +111,10 @@ PriorityResolver::getSchedPktPrio(const InboundMessage* inbndMsg)
         case PrioResolutionMode::STATIC_CDF_UNIFORM: {
         case PrioResolutionMode::STATIC_CBF_UNIFORM:
             if (bytesToGrantOnWire < bytesTreatedUnsched) {
-                return getMesgPrio(msgSize);
+                uint32_t pri = getMesgPrio(msgSize);
+                if (pri == 0) 
+                    pri += 1;
+                return pri;
             } else {
                 return homaConfig->allPrio-1;
             }
