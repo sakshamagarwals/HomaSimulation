@@ -61,9 +61,8 @@ PriorityResolver::getUnschedPktsPrio(const OutboundMessage* outbndMsg)
                 if (msgSize == outbndMsg->msgSize) {
                     unschedPktsPrio.push_back(getMesgPrio(0));
                 } else {
-                    uint32_t pri = getMesgPrio(msgSize);
-                    if (pri == 0) 
-                        pri += 1;
+                    uint32_t pri = getMesgPrio(msgSize) + 1;
+                    assert(pri <= homaConfig->allPrio-1);
                     unschedPktsPrio.push_back(pri);
                 }
                 ASSERT(msgSize >= pkt);
@@ -100,9 +99,8 @@ PriorityResolver::getSchedPktPrio(const InboundMessage* inbndMsg)
         case PrioResolutionMode::EXPLICIT:
         case PrioResolutionMode::STATIC_CBF_GRADUATED: {
             if (bytesToGrantOnWire < bytesTreatedUnsched) {
-                uint32_t pri = getMesgPrio(bytesToGrant);
-                if (pri == 0) 
-                    pri += 1;
+                uint32_t pri = getMesgPrio(bytesToGrant) + 1;
+                assert(pri <= homaConfig->allPrio-1);
                 return pri;
             } else {
                 return homaConfig->allPrio-1;
@@ -111,9 +109,8 @@ PriorityResolver::getSchedPktPrio(const InboundMessage* inbndMsg)
         case PrioResolutionMode::STATIC_CDF_UNIFORM: {
         case PrioResolutionMode::STATIC_CBF_UNIFORM:
             if (bytesToGrantOnWire < bytesTreatedUnsched) {
-                uint32_t pri = getMesgPrio(msgSize);
-                if (pri == 0) 
-                    pri += 1;
+                uint32_t pri = getMesgPrio(msgSize) + 1;
+                assert(pri <= homaConfig->allPrio-1);
                 return pri;
             } else {
                 return homaConfig->allPrio-1;

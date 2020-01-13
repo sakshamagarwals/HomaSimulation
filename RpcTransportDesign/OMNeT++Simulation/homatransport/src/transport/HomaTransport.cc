@@ -2831,7 +2831,7 @@ uint16_t
 HomaTransport::ReceiveScheduler::SchedSenders::getPrioForMesg(SchedState& st)
 {
     int grantPrio =
-        st.sInd + homaConfig->allPrio - homaConfig->adaptiveSchedPrioLevels;
+        st.sInd + homaConfig->allPrio - homaConfig->adaptiveSchedPrioLevels + 1;
     grantPrio = std::min(homaConfig->allPrio - 1, grantPrio);
     EV << "Get prio for mesg. sInd: " << st.sInd << ", grantPrio: " <<
         grantPrio << ", allPrio: " << homaConfig->allPrio << ", schedPrios: " <<
