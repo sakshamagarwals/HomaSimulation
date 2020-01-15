@@ -30,6 +30,7 @@ network DcnTopo
         int numServersPerTor;
         double edgeLinkDelay @unit(us) = default(0.0us); // This models NIC
                                                          // intrinsic delay
+	string QueueSizeFile;
         double realLoadFactor;
         int nicLinkSpeed @unit(Gbps);
 

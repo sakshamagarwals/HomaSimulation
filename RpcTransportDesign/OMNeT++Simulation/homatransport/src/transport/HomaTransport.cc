@@ -44,6 +44,7 @@ void DebugQueue::initialize() {
     numAggSwitches  = getModuleByPath("DcnTopo")->par("numAggSwitches").longValue();
     numTors = getModuleByPath("DcnTopo")->par("numTors").longValue();
     numServersPerTor = getModuleByPath("DcnTopo")->par("numServersPerTor").longValue();
+    std::string fileName = std::string("results/") + std::string(getModuleByPath("DcnTopo")->par("QueueSizeFile").stringValue());
     for (uint32_t i = 0; i < numAggSwitches; i++) {
         aggs_total.push_back(0);
         aggs_max.push_back(0);
@@ -52,7 +53,7 @@ void DebugQueue::initialize() {
         tors_total.push_back(0);
         tors_max.push_back(0);
     }
-    outputFile.open("queue_size.txt");
+    outputFile.open(fileName);
 }
 
 void DebugQueue::record() {
