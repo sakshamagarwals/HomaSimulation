@@ -19,6 +19,7 @@
 #include <queue>
 #include <vector>
 #include <list>
+#include <fstream>
 #include <unordered_map>
 #include <unordered_set>
 #include <omnetpp.h>
@@ -31,16 +32,48 @@
 #include "transport/HomaConfigDepot.h"
 #include "mocks/MockUdpSocket.h"
 #include "inet/transportlayer/contract/udp/UDPSocket.h"
+#include "inet/common/queue/DropTailQueue.h"
 
 #if TESTING
 typedef MockUdpSocket UDPSocket;
 #else
 typedef inet::UDPSocket UDPSocket;
+typedef inet::DropTailQueue DropTailQueue;
 #endif
 
 // forward decalration to enable mutual header include
 class TrafficPacer;
 class PriorityResolver;
+
+
+
+
+class DebugQueue: public cSimpleModule {
+    PUBLIC:
+    std::vector<uint64_t> aggs_total;
+    std::vector<uint64_t> tors_total;
+    std::vector<uint64_t> aggs_max;
+    std::vector<uint64_t> tors_max;
+    uint64_t count;
+    int numAggSwitches;
+    int numTors;
+    int numServersPerTor;
+    simtime_t record_interval;
+    simtime_t print_interval;
+    bool isInitialize;
+    simtime_t next_record_t;
+    simtime_t next_print_t;
+    std::ofstream outputFile;
+    void initialize();
+    void record();
+    void print();
+    bool shouldRecord() {
+        return next_record_t < simTime();
+    };
+    bool shouldPrint() {
+        return next_print_t < simTime();
+    }
+};
 
 /**
  * A grant based, receiver driven, congection control transport protocol over

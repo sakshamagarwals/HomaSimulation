@@ -24,9 +24,80 @@
 
 extern uint64_t total_outstanding_bytes;
 extern std::ofstream outputFile;
-int total_flow = 15;
+DebugQueue debugQueue;
 // Required by OMNeT++ for all simple modules.
 Define_Module(HomaTransport);
+
+
+
+
+void DebugQueue::initialize() {
+    if(isInitialize) {
+        return;
+    }
+    isInitialize = true;
+    record_interval = simtime_t(0.000002);
+    print_interval = simtime_t(0.0001);
+    count = 0;
+    next_record_t = record_interval;
+    next_print_t = print_interval;
+    numAggSwitches  = getModuleByPath("DcnTopo")->par("numAggSwitches").longValue();
+    numTors = getModuleByPath("DcnTopo")->par("numTors").longValue();
+    numServersPerTor = getModuleByPath("DcnTopo")->par("numServersPerTor").longValue();
+    for (uint32_t i = 0; i < numAggSwitches; i++) {
+        aggs_total.push_back(0);
+        aggs_max.push_back(0);
+    }
+    for (uint32_t i = 0; i < numTors; i++) {
+        tors_total.push_back(0);
+        tors_max.push_back(0);
+    }
+    outputFile.open("queue_size.txt");
+}
+
+void DebugQueue::record() {
+    for (uint32_t i = 0; i < numAggSwitches; i++) {
+        uint64_t queueLength = 0;
+        for (uint32_t j = 0; j < numTors; j++) {
+            std::string path = "DcnTopo.aggRouter["+ std::to_string(i) + "].eth["+ std::to_string(j) + "].queue.dataQueue";
+            DropTailQueue* q = check_and_cast<DropTailQueue*>(getModuleByPath(path.c_str()));
+            queueLength += q->getByteLength();
+        }
+        aggs_total[i] += queueLength;
+        aggs_max[i] = std::max(aggs_max[i], queueLength);
+    }    
+    for (uint32_t i = 0; i < numTors; i++) {
+        uint64_t queueLength = 0;
+        for(uint32_t j = 0; j < numServersPerTor + numAggSwitches; j++) {
+            std::string path = "DcnTopo.tor["+ std::to_string(i) + "].eth["+ std::to_string(j) + "].queue.dataQueue";
+            DropTailQueue* q = check_and_cast<DropTailQueue*>(getModuleByPath(path.c_str()));
+            queueLength += q->getByteLength();
+        }
+        tors_total[i] += queueLength;
+        tors_max[i] = std::max(tors_max[i], queueLength);
+    }
+    count ++;
+    next_record_t += record_interval;
+}
+
+void DebugQueue::print() {
+    outputFile << simTime() << " ";
+    outputFile << "agg: ";
+    for(uint32_t i = 0; i < numAggSwitches; i++) {
+          outputFile <<  aggs_total[i] / count << " ";
+
+          outputFile <<  aggs_max[i] << " ";
+    }
+    outputFile << std::endl;
+    outputFile << "tor: ";
+    for(uint32_t i = 0; i < numTors; i++) {
+          outputFile <<  tors_total[i] / count << " ";
+          outputFile <<  tors_max[i] << " ";
+
+    }
+    outputFile << std::endl;
+    next_print_t += print_interval;
+}
 // double totalsentPkt = 0;
 // double recordTime = 1e-5;
 // bool recordMode = true;
@@ -177,6 +248,9 @@ HomaTransport::initialize()
     scheduleAt(simTime(), sendTimer);
     //std::cout << "transport ptr " << static_cast<void*>(homaConfig) <<
     //    std::endl;
+    // ----
+
+    debugQueue.initialize();
 }
 
 /**
@@ -247,6 +321,10 @@ void
 HomaTransport::handleMessage(cMessage *msg)
 {
     Enter_Method_Silent();
+    if(debugQueue.shouldRecord())
+        debugQueue.record();
+    if(debugQueue.shouldPrint())
+        debugQueue.print();
     if (msg->isSelfMessage()) {
         switch (msg->getKind()) {
             case SelfMsgKind::START:
@@ -565,7 +643,7 @@ HomaTransport::SendController::processReceivedGrant(HomaPkt* rxPkt)
     size_t numRemoved = outbndMsgSet.erase(outboundMsg);
     ASSERT(numRemoved <= 1); // At most one item removed
     // set remaining size as byteleft
-    outboundMsg->bytesLeft = std::min (outboundMsg->bytesLeft, rxPkt->getGrantFields().remainingSize);
+    outboundMsg->bytesLeft = rxPkt->getGrantFields().remainingSize;
     // int bytesToSchedOld = outboundMsg->bytesToSched;
     // int bytesToSchedNew = outboundMsg->prepareSchedPkt(
     //     rxPkt->getGrantFields().offset, rxPkt->getGrantFields().grantBytes,
@@ -2028,7 +2106,6 @@ HomaTransport::ReceiveScheduler::SenderState::handleInboundPkt(HomaPkt* rxPkt)
 #endif
         // std::cout <<  simTime() << "inboundMesg finish!: " << inboundMesg->msgIdAtSender << std::endl;
         // mesgsToGrant.erase(inboundMesg);
-        total_flow -= 1;
         rtxTimersMap.erase(inboundMesg->rtxTimer);
         // remove this message from the incompleteRxMsgs
         incompleteMesgs.erase(inboundMesg->msgIdAtSender);
@@ -2831,7 +2908,7 @@ uint16_t
 HomaTransport::ReceiveScheduler::SchedSenders::getPrioForMesg(SchedState& st)
 {
     int grantPrio =
-        st.sInd + homaConfig->allPrio - homaConfig->adaptiveSchedPrioLevels + 1;
+        st.sInd + homaConfig->allPrio - homaConfig->adaptiveSchedPrioLevels;
     grantPrio = std::min(homaConfig->allPrio - 1, grantPrio);
     EV << "Get prio for mesg. sInd: " << st.sInd << ", grantPrio: " <<
         grantPrio << ", allPrio: " << homaConfig->allPrio << ", schedPrios: " <<
@@ -3163,7 +3240,7 @@ HomaTransport::InboundMessage::fillinRxBytes(uint32_t byteStart,
     // }
 
     // if (pktType == PktType::SCHED_DATA) {
-        ASSERT(byteEnd >= byteStart);
+        ASSERT(byteEnd > byteStart);
         // update inflight grants list
         //std::cout << "first byte: " << byteStart <<
         //    ", last byte: " << byteEnd  << std::endl;
@@ -3179,19 +3256,19 @@ HomaTransport::InboundMessage::fillinRxBytes(uint32_t byteStart,
         // to do: handle duplicate messages
         if(grant == inflightGrants.end()) {
             // to do: this part will be removed later
-            // if(pktType == PktType::REQUEST || pktType == PktType::UNSCHED_DATA) {
-            //     std::cout << "pkt type: " << pktType << std::endl;
+            if(pktType == PktType::REQUEST || pktType == PktType::UNSCHED_DATA) {
+                std::cout << "pkt type: " << pktType << std::endl;
 
-            //     std::cout << "messge size: " << this->msgSize << std::endl;
+                std::cout << "messge size: " << this->msgSize << std::endl;
 
-            //     std::cout << "byte start: " << byteStart << std::endl;
-            //     for (grant = inflightGrants.begin(); grant != inflightGrants.end();
-            //             grant++) {
-            //          std::cout << "grant offset: " << std::get<0>(*grant) << std::endl;
+                std::cout << "byte start: " << byteStart << std::endl;
+                for (grant = inflightGrants.begin(); grant != inflightGrants.end();
+                        grant++) {
+                     std::cout << "grant offset: " << std::get<0>(*grant) << std::endl;
 
-            //     }
-            //     ASSERT(false);
-            // }
+                }
+                ASSERT(false);
+            }
             return;
         }
         ASSERT(grant != inflightGrants.end());
