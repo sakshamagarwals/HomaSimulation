@@ -25,11 +25,13 @@ HomaConfigDepot::HomaConfigDepot(cComponent* ownerTransport)
     nicLinkSpeed = ownerTransport->par("nicLinkSpeed");
     rttBytes = ownerTransport->par("rttBytes");
     rtt = SimTime(1e-9 * rttBytes * 8.0 / nicLinkSpeed);
-    windowTimeout =
-        SimTime((double)ownerTransport->par("windowTimeout") 
-            * 1e-9 * rttBytes * 8.0 / nicLinkSpeed);
-    finishTimeout = SimTime((double)ownerTransport->par("finishTimeout") 
-            * 1e-9 * rttBytes * 8.0 / nicLinkSpeed);
+    // windowTimeout =
+    //     SimTime((double)ownerTransport->par("windowTimeout") 
+    //         * 1e-9 * rttBytes * 8.0 / nicLinkSpeed);
+    // finishTimeout = SimTime((double)ownerTransport->par("finishTimeout") 
+    //         * 1e-9 * rttBytes * 8.0 / nicLinkSpeed);
+    windowTimeout = SimTime(100.0);
+    finishTimeout = SimTime(100.0);
     maxOutstandingRecvBytes =
         (uint32_t)ownerTransport->par("maxOutstandingRecvBytes");
     grantMaxBytes = (uint32_t) ownerTransport->par("grantMaxBytes");
