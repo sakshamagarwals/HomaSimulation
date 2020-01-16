@@ -29,6 +29,10 @@ namespace inet {
  */
 class INET_API DropTailQueue : public PassiveQueueBase
 {
+  public:
+  uint32_t getByteLength(){
+  	return queue.getByteLength();
+  };
   protected:
     // configuration
     int frameCapacity;
