@@ -3257,20 +3257,20 @@ HomaTransport::InboundMessage::fillinRxBytes(uint32_t byteStart,
         }
         // to do: handle duplicate messages
         if(grant == inflightGrants.end()) {
-            // to do: this part will be removed later
-            if(pktType == PktType::REQUEST || pktType == PktType::UNSCHED_DATA) {
-                std::cout << "pkt type: " << pktType << std::endl;
+            // // to do: this part will be removed later
+            // if(pktType == PktType::REQUEST || pktType == PktType::UNSCHED_DATA) {
+            //     std::cout << "pkt type: " << pktType << std::endl;
 
-                std::cout << "messge size: " << this->msgSize << std::endl;
+            //     std::cout << "messge size: " << this->msgSize << std::endl;
 
-                std::cout << "byte start: " << byteStart << std::endl;
-                for (grant = inflightGrants.begin(); grant != inflightGrants.end();
-                        grant++) {
-                     std::cout << "grant offset: " << std::get<0>(*grant) << std::endl;
+            //     std::cout << "byte start: " << byteStart << std::endl;
+            //     for (grant = inflightGrants.begin(); grant != inflightGrants.end();
+            //             grant++) {
+            //          std::cout << "grant offset: " << std::get<0>(*grant) << std::endl;
 
-                }
-                ASSERT(false);
-            }
+            //     }
+            //     ASSERT(false);
+            // }
             return;
         }
         ASSERT(grant != inflightGrants.end());
