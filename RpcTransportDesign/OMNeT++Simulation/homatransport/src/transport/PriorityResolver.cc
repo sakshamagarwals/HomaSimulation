@@ -99,7 +99,7 @@ PriorityResolver::getSchedPktPrio(const InboundMessage* inbndMsg)
         case PrioResolutionMode::EXPLICIT:
         case PrioResolutionMode::STATIC_CBF_GRADUATED: {
             if (bytesToGrantOnWire < bytesTreatedUnsched) {
-                uint32_t pri = getMesgPrio(bytesToGrant) + 1;
+                uint32_t pri = std::min(getMesgPrio(bytesToGrant) + 2, homaConfig->allPrio-1);
                 assert(pri <= homaConfig->allPrio-1);
                 return pri;
             } else {
@@ -109,7 +109,7 @@ PriorityResolver::getSchedPktPrio(const InboundMessage* inbndMsg)
         case PrioResolutionMode::STATIC_CDF_UNIFORM: {
         case PrioResolutionMode::STATIC_CBF_UNIFORM:
             if (bytesToGrantOnWire < bytesTreatedUnsched) {
-                uint32_t pri = getMesgPrio(msgSize) + 1;
+                uint32_t pri = std::min(getMesgPrio(msgSize) + 2, homaConfig->allPrio-1);
                 assert(pri <= homaConfig->allPrio-1);
                 return pri;
             } else {
