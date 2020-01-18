@@ -448,7 +448,7 @@ class HomaTransport : public cSimpleModule
 
         // All unscheduled bytes that come in req. pkt and the following
         // unsched packets for this message.
-        uint16_t totalUnschedBytes;
+        uint32_t totalUnschedBytes;
 
         // simulation time at which this message was created in the sender side.
         // Used to calculate the end to end latency of this message.

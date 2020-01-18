@@ -30,6 +30,7 @@ Define_Module(HomaTransport);
 
 
 
+int total_flow = 0;
 
 void DebugQueue::initialize() {
     if(isInitialize) {
@@ -672,7 +673,8 @@ HomaTransport::SendController::processReceivedAck(HomaPkt* rxPkt)
 {
     OutboundMessage* outboundMsg = &(outboundMsgMap.at(rxPkt->getMsgId()));
     msgTransmitComplete(outboundMsg);
-
+    total_flow ++;
+    std::cout << total_flow << std::endl;
     delete rxPkt;
 }
 
@@ -1574,6 +1576,18 @@ HomaTransport::ReceiveScheduler::processReceivedPkt(HomaPkt* rxPkt)
 
     // process received packet
     auto msgCompHandle = s->handleInboundPkt(rxPkt);
+    // if(msgCompHandle.second == -1) {
+    //     std::cout << "start\n";
+    //     for(int i =  schedSenders->headIdx; i <  schedSenders->headIdx + schedSenders->numToGrant; i++) {
+    //         InboundMessage* msg = (*(schedSenders->senders[i]->mesgsToGrant.begin()));
+    //         std::cout << "sender " << schedSenders->senders[i]->senderAddr << " ";
+    //         std::cout << "bytesToReceive " << msg->bytesToReceive << " ";
+    //         std::cout << "windowTimeout " << msg->isWindowTimeout << " ";
+    //         std::cout << "totalBytesInFlight " << msg->totalBytesInFlight << " ";
+    //         std::cout << "max " << homaConfig->maxOutstandingRecvBytes << " "; 
+    //         std::cout << "grantTimer " <<  schedSenders->senders[i]->grantTimer->isScheduled() << std::endl;
+    //     }
+    // }
 
     // Handling a received packet can change the state of the scheduled senders.
     // We need to check for message completion and see if new grant should be
@@ -1996,7 +2010,6 @@ HomaTransport::ReceiveScheduler::SenderState::handleInboundPkt(HomaPkt* rxPkt)
         inboundMesg = new InboundMessage(rxPkt, this->rxScheduler, homaConfig);
         incompleteMesgs[rxPkt->getMsgId()] = inboundMesg;
         rtxTimersMap[inboundMesg->rtxTimer] = inboundMesg;
-        
         if(!inboundMesg->isMesgSched) {
             ASSERT(!inboundMesg->isWindowTimeout);
             inboundMesg->isFinishTimeout = true;
@@ -3273,11 +3286,18 @@ HomaTransport::InboundMessage::fillinRxBytes(uint32_t byteStart,
             // }
             return;
         }
+
         ASSERT(grant != inflightGrants.end());
         ASSERT(std::get<1>(*grant) == bytesReceived);
         bytesToReceive -= bytesReceived;
-        totalBytesInFlight -= bytesReceivedOnWire;
+        if(totalBytesInFlight < bytesReceivedOnWire) {
+            totalBytesInFlight = 0;
+        } else {
+            totalBytesInFlight -= bytesReceivedOnWire;
+        }
+        // assert(totalBytesInFlight > bytesReceivedOnWire);
         totalBytesOnWire += bytesReceivedOnWire;
+
         // For count util
         total_outstanding_bytes -= bytesReceived;
         if (bytesReceivedOnWire == HomaPkt::maxEthFrameSize()) {
