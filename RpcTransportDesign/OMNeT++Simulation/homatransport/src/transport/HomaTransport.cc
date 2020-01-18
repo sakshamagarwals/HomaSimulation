@@ -28,10 +28,6 @@ DebugQueue debugQueue;
 // Required by OMNeT++ for all simple modules.
 Define_Module(HomaTransport);
 
-
-
-int total_flow = 0;
-
 void DebugQueue::initialize() {
     if(isInitialize) {
         return;
@@ -673,8 +669,6 @@ HomaTransport::SendController::processReceivedAck(HomaPkt* rxPkt)
 {
     OutboundMessage* outboundMsg = &(outboundMsgMap.at(rxPkt->getMsgId()));
     msgTransmitComplete(outboundMsg);
-    total_flow ++;
-    std::cout << total_flow << std::endl;
     delete rxPkt;
 }
 
