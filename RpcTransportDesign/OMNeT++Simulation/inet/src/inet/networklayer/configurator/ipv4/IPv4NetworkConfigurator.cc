@@ -1755,8 +1755,8 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
             }
 
             // optimize routing table to save memory and increase lookup performance
-            if (optimizeRoutesParameter)
-                optimizeRoutes(sourceNode->staticRoutes);
+          //  if (optimizeRoutesParameter)
+            //    optimizeRoutes(sourceNode->staticRoutes);
         }
     }
 }
