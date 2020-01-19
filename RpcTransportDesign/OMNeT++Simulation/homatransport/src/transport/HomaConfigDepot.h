@@ -55,7 +55,7 @@ class HomaConfigDepot {
     // finishTimeout
     simtime_t finishTimeout;
     // RTT in bytes for the topology, given as a configuration parameter.
-    uint16_t rttBytes;
+    uint32_t rttBytes;
 
     // This parameter is read from the omnetpp.ini config file and provides an
     // upper bound on the total allowed outstanding bytes. It is necessary for
