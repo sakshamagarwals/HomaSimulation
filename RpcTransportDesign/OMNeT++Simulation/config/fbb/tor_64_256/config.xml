@@ -3,6 +3,7 @@
     </param>
 
     <IPv4Configurator> 
+	<config>
     <interface hosts='**.host[0..63]' address='10.x.0.x' netmask='255.x.x.x'/>
 
 <interface hosts='**.host[64..127]' address='10.x.1.x' netmask='255.x.x.x'/>
@@ -12,6 +13,7 @@
 <interface hosts='**.host[192..255]' address='10.x.3.x' netmask='255.x.x.x'/>
 
 
+	</config>
     </IPv4Configurator>
         <hostConfig id="0">
         <transportConfig>

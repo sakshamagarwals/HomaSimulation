@@ -14,7 +14,9 @@ template_head = """<topologyConfig>
     </param>
 
     <IPv4Configurator> 
+	<config>
     {}
+	</config>
     </IPv4Configurator>
     {}
 </topologyConfig>"""
