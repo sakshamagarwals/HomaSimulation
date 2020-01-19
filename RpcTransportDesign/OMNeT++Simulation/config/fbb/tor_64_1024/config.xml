@@ -37,6 +37,7 @@
 <interface hosts='**.host[960..1023]' address='10.x.15.x' netmask='255.x.x.x'/>
 
 
+<interface hosts='**' address='10.x.x.x' netmask='255.x.x.x'/>
 	</config>
     </IPv4Configurator>
         <hostConfig id="0">

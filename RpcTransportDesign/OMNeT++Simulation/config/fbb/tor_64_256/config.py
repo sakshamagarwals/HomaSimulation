@@ -16,6 +16,7 @@ template_head = """<topologyConfig>
     <IPv4Configurator> 
 	<config>
     {}
+<interface hosts='**' address='10.x.x.x' netmask='255.x.x.x'/>
 	</config>
     </IPv4Configurator>
     {}
