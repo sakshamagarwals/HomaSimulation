@@ -69,7 +69,7 @@ class INET_API EtherMACBase : public MACBase
     };
 
     enum {
-        NUM_OF_ETHERDESCRS = 9
+        NUM_OF_ETHERDESCRS = 10
     };
 
     struct EtherDescr
