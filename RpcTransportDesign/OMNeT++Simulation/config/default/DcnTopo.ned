@@ -28,6 +28,7 @@ network DcnTopo
         @display("bgb=319,325");
         xml topologyConfig = xmldoc("config.xml");
         int numServersPerTor;
+	string QueueSizeFile; 
         double edgeLinkDelay @unit(us) = default(0.0us); // This models NIC
                                                          // intrinsic delay
         double realLoadFactor;
