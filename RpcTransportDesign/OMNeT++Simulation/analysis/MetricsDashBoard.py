@@ -20,7 +20,7 @@ import json
 
 sys.path.insert(0, os.environ['HOME'] + '/Research/RpcTransportDesign/OMNeT++Simulation/analysis')
 from parseResultFiles import *
-
+STOP_TIME = 0.0
 def copyExclude(source, dest, exclude):
     selectKeys = (key for key in source if key not in exclude)
     for key in selectKeys:
@@ -428,8 +428,6 @@ def printE2EStretchAndDelay(e2eStretchAndDelayDigest, unit, out, load):
         out[load]["mean"].append(e2eSizedStretch['mean'])
         out[load]["99"].append(e2eSizedStretch['ninety9Percentile'])
         out[load]["stddev"].append(e2eSizedStretch['stddev'])
-    print e2eSizedStretch
-    print total_slowdown / total_count, total_count
 
 def msgBytesOnWire(parsedStats, xmlParsedDic, msgBytesOnWireDigest):
     if 'globalListener' in parsedStats:
@@ -687,6 +685,7 @@ def globalTransportSchedDelay(parsedStats, xmlParsedDic, msgBytesOnWireDigest, t
     return transportSchedDelayDigest
 
 def printGenralInfo(xmlParsedDic, generalInfo):
+    global STOP_TIME
     tw = 20
     fw = 12
     lineMax = 100
@@ -705,6 +704,8 @@ def printGenralInfo(xmlParsedDic, generalInfo):
         '{0}'.format(generalInfo.hostSwTurnAroundTime).center(fw) + 'NIC Sx ThinkTime:'.ljust(tw) + '{0}'.format(generalInfo.hostNicSxThinkTime).center(fw))
     print('TransportScheme:'.ljust(tw) + '{0} '.format(generalInfo.transportSchemeType).center(fw) + 'Workload Type:'.ljust(tw) +
         '{0}'.format(generalInfo.workloadType).center(fw))
+
+    STOP_TIME = float(generalInfo.stopTime[:-1])
 
 def digestTrafficInfo(trafficBytesAndRateDic, title):
     trafficDigest = trafficBytesAndRateDic.trafficDigest
@@ -774,7 +775,6 @@ def computeBytesAndRates(parsedStats, xmlParsedDic):
             rxNicsBytes.append(nicRcvBytes)
             rxNicsRates.append(nicRcvRate)
             rxNicsDutyCycles.append(nicRcvDutyCycle)
-
     upNicsTxBytes = trafficDic.torsTraffic.upNics.sx.bytes = []
     upNicsTxRates = trafficDic.torsTraffic.upNics.sx.rates = []
     upNicsTxDutyCycle = trafficDic.torsTraffic.upNics.sx.dutyCycles = []
@@ -1424,7 +1424,6 @@ def computeQueueLength(parsedStats, xmlParsedDic):
     senderTorIds = [elem for elem in set([int(id / numServersPerTor) for id in senderHostIds])]
     receiverHostIds = xmlParsedDic.receiverIds
     receiverTorIdsIfaces = [(int(id / numServersPerTor), id % numServersPerTor) for id in receiverHostIds]
-
     for torKey in parsedStats.tors.keys():
         tor = parsedStats.tors[torKey]
         torId = int(re.match('tor\[([0-9]+)]', torKey).group(1))
@@ -1531,7 +1530,7 @@ def computeQueueLength(parsedStats, xmlParsedDic):
     digestQueueLenInfo(queueLen.aggrs.nic, 'All AGGRs')
     return  queueLen
 
-def printQueueLength(queueLen):
+def printQueueLength(queueLen, result):
     printKeys = ['meanCnt', 'stddevCnt', 'meanBytes', 'stddevBytes', 'empty', 'onePkt', 'minCnt', 'minBytes', 'maxCnt', 'maxBytes']
     tw = 15
     fw = 9
@@ -1554,9 +1553,10 @@ def printQueueLength(queueLen):
     printStatsLine(queueLen.aggrs.nic.queueLenDigest, queueLen.aggrs.nic.queueLenDigest.title, tw, fw, '', printKeys)
     printStatsLine(queueLen.rxTors.down.nic.queueLenDigest, queueLen.rxTors.down.nic.queueLenDigest.title, tw, fw, '', printKeys)
     printStatsLine(queueLen.tors.down.nic.queueLenDigest, queueLen.tors.down.nic.queueLenDigest.title, tw, fw, '', printKeys)
-
+    result['avg_q'] = queueLen.tors.down.nic.queueLenDigest['meanBytes']
+    result['max_q'] =  queueLen.tors.down.nic.queueLenDigest['maxBytes']
 def main():
-    traces = ["IMC10", "DCTCP"]
+    traces = ["IMC10", "DCTCP", "DataMining"]
     directory = "homatransport/src/dcntopo/results/manyReceivers/comparison/"
     output_file = "result.txt"
     out = open(output_file, "w")
@@ -1577,7 +1577,14 @@ def main():
 
     for trace in traces:
         results[trace] = {}
-        for i in range(5):
+        for i in range(4):
+            load = i / 10.0 + 0.5
+            results[trace][load] = {}
+            results[trace][load]['mean'] = []
+            results[trace][load]['99'] = []
+            results[trace][load]['stddev'] = []
+            results[trace][load]['avg_q'] = []
+            results[trace][load]['max_q'] = []
             scalarResultFile = directory + "Workload{}-{}.sca".format(trace, i)
             sp = ScalarParser(scalarResultFile)
             parsedStats = AttrDict()
@@ -1611,7 +1618,7 @@ def main():
             trafficDic = computeBytesAndRates(parsedStats, xmlParsedDic)
             printBytesAndRates(trafficDic)
             queueLen = computeQueueLength(parsedStats, xmlParsedDic)
-            printQueueLength(queueLen)
+            printQueueLength(queueLen, results[trace][load])
             printQueueTimeStats(queueWaitTimeDigest, 'us')
             msgBytesOnWireDigest = AttrDict()
             msgBytesOnWire(parsedStats, xmlParsedDic, msgBytesOnWireDigest)
@@ -1622,12 +1629,6 @@ def main():
 
             e2eStretchAndDelayDigest = AttrDict()
             e2eStretchAndDelay(parsedStats, xmlParsedDic, msgBytesOnWireDigest, e2eStretchAndDelayDigest)
-            load = i / 10.0 + 0.5
-            results[trace][load] = {}
-            results[trace][load]['mean'] = []
-            results[trace][load]['99'] = []
-            results[trace][load]['stddev'] = []
-
             printE2EStretchAndDelay(e2eStretchAndDelayDigest, 'us', results[trace], load)
     file = json.dumps(results)
     out.write(file)
