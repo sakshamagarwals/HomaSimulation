@@ -569,10 +569,10 @@ WorkloadSynthesizer::sendMsg()
 
     total_bytes += sendMsgSize;
     total_outstanding_bytes += sendMsgSize;
-    if(total_sent % 100000 == 0) {
-        outputFile << "## " << simTime() << " " << total_outstanding_bytes << " " <<  total_bytes << "\n";
-        outputFile.flush();
-    }
+    //if(total_sent % 100000 == 0) {
+      //  outputFile << "## " << simTime() << " " << total_outstanding_bytes << " " <<  total_bytes << "\n";
+      //  outputFile.flush();
+    //}
     total_sent++;
 
 }
@@ -757,10 +757,10 @@ WorkloadSynthesizer::processRcvdMsg(cPacket* msg)
     }
 
     outputFile  << (srcAddr.toIPv4().getDByte(2) ==  destAddr.toIPv4().getDByte(2)) << " " << msgByteLen << " " << rcvdMsg->getMsgCreationTime().dbl() << " " << simTime() << " "
-    << completionTime.dbl() << " queue delay: " << queuingDelay << "rcvdMsg->getTransportSchedDelay(): " << rcvdMsg->getTransportSchedDelay() << std::endl;
-    if(stretchFactor > 20) {
-        std::cout << srcAddr.str() << " " << destAddr.str() << " " << rcvdMsg->getMsgCreationTime().dbl() << " " << simTime() << " msgByteLen " << msgByteLen << std::endl;
-    }
+    << completionTime.dbl() << " " << idealMsgEndToEndDelay(rcvdMsg) <<  " " << queuingDelay << "  " << rcvdMsg->getTransportSchedDelay() << std::endl;
+    //if(stretchFactor > 20) {
+    //    std::cout << srcAddr.str() << " " << destAddr.str() << " " << rcvdMsg->getMsgCreationTime().dbl() << " " << simTime() << " msgByteLen " << msgByteLen << std::endl;
+    //}
     outputFile.flush();
     mesgStats.mesgSize = msgByteLen;
     mesgStats.mesgSizeOnWire =  rcvdMsg->getMsgBytesOnWire();
